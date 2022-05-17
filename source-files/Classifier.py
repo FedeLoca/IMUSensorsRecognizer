@@ -49,13 +49,9 @@ class Classifier:
         x_train = np.delete(x_train, np.s_[len(self.feature_names):], 1)  # remove data lengths as they are not feat.
         y_train = np.array(y_train)
         x_test = np.array(x_test)
-        print("### before columns: " + str(len(x_test[0])))
         x_test_lengths = x_test[:, len(self.feature_names):]
         x_test = np.delete(x_test, np.s_[len(self.feature_names):], 1)
-        print("### after columns: " + str(len(x_test[0])))
-        print("### length columns: " + str(len(x_test_lengths[0])))
         y_test = np.array(y_test)
-        print("### features names length: " + str(len(self.feature_names)))
         print("### Features number: " + str(len(x_test[0])))
         print("### Total samples: " + str(len(y_train) + len(y_test)))
         print("### Train samples: " + str(len(y_train)))

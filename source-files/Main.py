@@ -1,3 +1,5 @@
+import os
+
 import numpy
 import time
 import sys
@@ -66,14 +68,18 @@ class Main:
             num_actions_dict = num_actions_dict4
             actions_num_dict = actions_num_dict4
 
+        print(num_actions_dict)
+        print(actions_num_dict)
+
         start_time = time.time()
         # "..\\training-data-discrete"
         # "..\\training-data-with-other-idle-discrete"
         # "..\\training-data-continued"
         # "..\\training-data-with-other-idle-continued"
-        # "../training-data-discrete" in linux
-        training_data = DataRetriever.retrieve_training_data("../training-data-discrete")
-        # test_data = DataRetriever.retrieve_test_data("../test-data")
+        training_path = ".." + os.sep + "training-data-discrete"
+        training_data = DataRetriever.retrieve_training_data(training_path)
+        # test_path = ".." + os.sep + "test-data"
+        # test_data = DataRetriever.retrieve_test_data(test_path)
         print("\n\n--- %s retrieve data seconds ---\n\n" % (time.time() - start_time))
 
         classifier = Classifier(training_data, None, num_actions_dict, actions_num_dict)

@@ -11,7 +11,7 @@ class DataRetriever:
     def get_folder_paths(outer_folder_name):
         os.chdir(outer_folder_name)
         folder_paths_list = [os.path.abspath(name) for name in os.listdir() if os.path.isdir(name)]
-        paths_dict = dict([(el.split("\\")[-1], el) for el in folder_paths_list])
+        paths_dict = dict([(el.split(os.sep)[-1], el) for el in folder_paths_list])
         [print(k + ": " + v) for k, v in paths_dict.items()]
         return paths_dict
 
@@ -25,7 +25,7 @@ class DataRetriever:
         gyro_data = dict()
         for i in range(0, file_paths_list.__len__()):  # for each file
             # parse the path to retrieve the file name
-            file_name = file_paths_list[i].split("\\")[-1]
+            file_name = file_paths_list[i].split(os.sep)[-1]
             if "ACC" in file_name:  # if the file name contains ACC it means it contains accelerometer data
                 # so read the data and store it in the acc_data dict associated with the device MAC address
                 df = pandas.read_csv(file_paths_list[i])
