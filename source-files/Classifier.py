@@ -85,8 +85,8 @@ class Classifier:
         print("\nTest...")
         prediction = model.predict(x_test)
         confusion_matrix = skm.confusion_matrix(y_test, prediction)
-        for i in range(0, len(y_test)):
-            print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
+        # for i in range(0, len(y_test)):
+            # print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
         # print("Test samples: " + str(y_test))
         # print("Prediction: " + str(prediction))
         score = model.score(x_test, y_test)
