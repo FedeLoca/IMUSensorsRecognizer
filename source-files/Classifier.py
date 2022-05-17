@@ -70,7 +70,7 @@ class Classifier:
             # n_neighbors must be equal or lower than the number of train samples
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
                                          metric='minkowski', metric_params=None)
-        elif model_type == 'random forest':
+        elif model_type == 'random-forest':
             model = RandomForestClassifier(n_estimators=100, criterion='gini', max_depth=None, min_samples_split=2,
                                            min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features='auto',
                                            max_leaf_nodes=None, min_impurity_decrease=0.0, bootstrap=True,

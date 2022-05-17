@@ -57,7 +57,7 @@ class Main:
     test_path = "test-data"
 
     model_type = 'k-nn'
-    # model_type = 'random forest'
+    # model_type = 'random-forest'
     window_dim = 500  # in milliseconds
     actions = 1
     save = False
