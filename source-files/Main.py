@@ -26,19 +26,25 @@ class Main:
                         2: 'BL_RHU', 3: 'BB_HH'}
     actions_num_dict1 = {'BF_HU': 0, 'BR_LHU': 1,
                         'BL_RHU': 2, 'BB_HH': 3}
+    training_path1 = "training-data-discrete"
     num_actions_dict2 = {0: 'IDLE', 1: 'OTHER', 2: 'BF_HU', 3: 'BR_LHU',
                         4: 'BL_RHU', 5: 'BB_HH'}
     actions_num_dict2 = {'IDLE': 0, 'OTHER': 1, 'BF_HU': 2, 'BR_LHU': 3,
                         'BL_RHU': 4, 'BB_HH': 5}
+    training_path2 = "training-data-with-other-idle-discrete"
 
     num_actions_dict3 = {0: 'LWR_C', 1: 'RWR_CC',
                         2: 'WR_HU', 3: 'WR_HD'}
     actions_num_dict3 = {'LWR_C': 0, 'RWR_CC': 1,
                         'WR_HU': 2, 'WR_HD': 3}
+    training_path3 = "training-data-continued"
     num_actions_dict4 = {0: 'IDLE', 1: 'OTHER', 2: 'LWR_C', 3: 'RWR_CC',
                         4: 'WR_HU', 5: 'WR_HD'}
     actions_num_dict4 = {'IDLE': 0, 'OTHER': 1, 'LWR_C': 2, 'RWR_CC': 3,
                         'WR_HU': 4, 'WR_HD': 5}
+    training_path4 = "training-data-with-other-idle-continued"
+
+    test_path = "test-data"
 
     model_type = 'k-nn'
     # model_type = 'random forest'
@@ -59,27 +65,28 @@ class Main:
 
         num_actions_dict = num_actions_dict1
         actions_num_dict = actions_num_dict1
+        training_path = training_path1
         if actions == 1:
             num_actions_dict = num_actions_dict1
             actions_num_dict = actions_num_dict1
+            training_path = training_path1
         elif actions == 2:
             num_actions_dict = num_actions_dict2
             actions_num_dict = actions_num_dict2
+            training_path = training_path2
         elif actions == 3:
             num_actions_dict = num_actions_dict3
             actions_num_dict = actions_num_dict3
+            training_path = training_path3
         elif actions == 4:
             num_actions_dict = num_actions_dict4
             actions_num_dict = actions_num_dict4
+            training_path = training_path4
 
         start_time = time.time()
-        # "..\\training-data-discrete"
-        # "..\\training-data-with-other-idle-discrete"
-        # "..\\training-data-continued"
-        # "..\\training-data-with-other-idle-continued"
-        training_path = ".." + os.sep + "training-data-discrete"
+        training_path = ".." + os.sep + training_path
         training_data = DataRetriever.retrieve_training_data(training_path)
-        # test_path = ".." + os.sep + "test-data"
+        # test_path = ".." + os.sep + test_path
         # test_data = DataRetriever.retrieve_test_data(test_path)
         print("\n\n--- %s retrieve data seconds ---\n\n" % (time.time() - start_time))
 
