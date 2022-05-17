@@ -44,14 +44,18 @@ class Main:
     # model_type = 'random forest'
     window_dim = 500  # in milliseconds
     actions = 1
+    save = False
 
     if __name__ == "__main__":
 
         print(sys.argv[1:])
         if len(sys.argv) > 1:
-            _, model_type, window_dim, actions = sys.argv
+            _, model_type, window_dim, actions, save = sys.argv
             window_dim = int(window_dim)
             actions = int(actions)
+
+        if save == 't':
+            save = True
 
         num_actions_dict = num_actions_dict1
         actions_num_dict = actions_num_dict1
@@ -125,7 +129,8 @@ class Main:
             ax.set_ylabel("Actual Values")
             ax.xaxis.set_ticklabels(list(num_actions_dict.values()))
             ax.yaxis.set_ticklabels(list(num_actions_dict.values()))
-            # plt.savefig('confusion_matrix.png')
+            if save:
+                plt.savefig('confusion_matrix.png')
             plt.show()
             '''
 
@@ -139,5 +144,6 @@ class Main:
         plt.ylabel('accuracy')
         plt.xlabel('training size')
         plt.title("Average accuracy plot for " + model_type + " with " + str(tries)+ " tries")
-        # plt.savefig('scores.png')
+        if save:
+            plt.savefig('scores.png')
         plt.show()
