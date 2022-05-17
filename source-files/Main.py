@@ -68,9 +68,6 @@ class Main:
             num_actions_dict = num_actions_dict4
             actions_num_dict = actions_num_dict4
 
-        print(num_actions_dict)
-        print(actions_num_dict)
-
         start_time = time.time()
         # "..\\training-data-discrete"
         # "..\\training-data-with-other-idle-discrete"
@@ -129,7 +126,7 @@ class Main:
             ax.xaxis.set_ticklabels(list(num_actions_dict.values()))
             ax.yaxis.set_ticklabels(list(num_actions_dict.values()))
             # plt.savefig('confusion_matrix.png')
-            plt.show(block=True)
+            plt.show()
             '''
 
             if scores[i] == best:
@@ -143,4 +140,4 @@ class Main:
         plt.xlabel('training size')
         plt.title("Average accuracy plot for " + model_type + " with " + str(tries)+ " tries")
         # plt.savefig('scores.png')
-        plt.show(block=True)
+        plt.show()
