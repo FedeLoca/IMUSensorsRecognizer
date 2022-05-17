@@ -70,6 +70,7 @@ class Main:
             _, model_type, window_dim, actions, tries, save = sys.argv
             window_dim = int(window_dim)
             actions = int(actions)
+            tries = int(tries)
 
         if save == 't':
             save = True
