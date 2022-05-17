@@ -1,4 +1,6 @@
 import numpy
+import time
+import sys
 
 from DataRetriever import DataRetriever
 from Classifier import Classifier
@@ -18,34 +20,53 @@ class Main:
     # wrist rotation hands up = WR_HU
     # wrist rotation hands down = WR_HD
 
-    num_actions_dict = {0: 'BF_HU', 1: 'BR_LHU',
+    num_actions_dict1 = {0: 'BF_HU', 1: 'BR_LHU',
                         2: 'BL_RHU', 3: 'BB_HH'}
-    actions_num_dict = {'BF_HU': 0, 'BR_LHU': 1,
+    actions_num_dict1 = {'BF_HU': 0, 'BR_LHU': 1,
                         'BL_RHU': 2, 'BB_HH': 3}
-    '''
-    num_actions_dict = {0: 'IDLE', 1: 'OTHER', 2: 'BF_HU', 3: 'BR_LHU',
+    num_actions_dict2 = {0: 'IDLE', 1: 'OTHER', 2: 'BF_HU', 3: 'BR_LHU',
                         4: 'BL_RHU', 5: 'BB_HH'}
-    actions_num_dict = {'IDLE': 0, 'OTHER': 1, 'BF_HU': 2, 'BR_LHU': 3,
+    actions_num_dict2 = {'IDLE': 0, 'OTHER': 1, 'BF_HU': 2, 'BR_LHU': 3,
                         'BL_RHU': 4, 'BB_HH': 5}
-    '''
-    '''
-    num_actions_dict = {0: 'LWR_C', 1: 'RWR_CC',
+
+    num_actions_dict3 = {0: 'LWR_C', 1: 'RWR_CC',
                         2: 'WR_HU', 3: 'WR_HD'}
-    actions_num_dict = {'LWR_C': 0, 'RWR_CC': 1,
+    actions_num_dict3 = {'LWR_C': 0, 'RWR_CC': 1,
                         'WR_HU': 2, 'WR_HD': 3}
-    '''
-    '''
-    num_actions_dict = {0: 'IDLE', 1: 'OTHER', 2: 'LWR_C', 3: 'RWR_CC',
+    num_actions_dict4 = {0: 'IDLE', 1: 'OTHER', 2: 'LWR_C', 3: 'RWR_CC',
                         4: 'WR_HU', 5: 'WR_HD'}
-    actions_num_dict = {'IDLE': 0, 'OTHER': 1, 'LWR_C': 2, 'RWR_CC': 3,
+    actions_num_dict4 = {'IDLE': 0, 'OTHER': 1, 'LWR_C': 2, 'RWR_CC': 3,
                         'WR_HU': 4, 'WR_HD': 5}
-    '''
 
     model_type = 'k-nn'
     # model_type = 'random forest'
     window_dim = 500  # in milliseconds
+    actions = 1
 
     if __name__ == "__main__":
+
+        print(sys.argv[1:])
+        if len(sys.argv) > 1:
+            _, model_type, window_dim, actions = sys.argv
+            window_dim = int(window_dim)
+            actions = int(actions)
+
+        num_actions_dict = num_actions_dict1
+        actions_num_dict = actions_num_dict1
+        if actions == 1:
+            num_actions_dict = num_actions_dict1
+            actions_num_dict = actions_num_dict1
+        elif actions == 2:
+            num_actions_dict = num_actions_dict2
+            actions_num_dict = actions_num_dict2
+        elif actions == 3:
+            num_actions_dict = num_actions_dict3
+            actions_num_dict = actions_num_dict3
+        elif actions == 4:
+            num_actions_dict = num_actions_dict4
+            actions_num_dict = actions_num_dict4
+
+        start_time = time.time()
         # "..\\training-data-discrete"
         # "..\\training-data-with-other-idle-discrete"
         # "..\\training-data-continued"
@@ -53,11 +74,17 @@ class Main:
         # "../training-data-discrete" in linux
         training_data = DataRetriever.retrieve_training_data("../training-data-discrete")
         # test_data = DataRetriever.retrieve_test_data("../test-data")
+        print("\n\n--- %s retrieve data seconds ---\n\n" % (time.time() - start_time))
 
         classifier = Classifier(training_data, None, num_actions_dict, actions_num_dict)
         # classifier = Classifier(training_data, test_data, num_actions_dict, actions_num_dict)
-        # classifier.compute_features()
-        classifier.compute_features_on_windows(window_dim)
+
+        start_time = time.time()
+        if window_dim > 0:
+            classifier.compute_features_on_windows(window_dim)
+        else:
+            classifier.compute_features()
+        print("\n\n--- %s compute features seconds ---\n\n" % (time.time() - start_time))
 
         scores = dict()
         confusion_matrices = dict()
@@ -69,7 +96,9 @@ class Main:
                 params[i] = "(tries: " + str(tries) + ", model-type: " + model_type + ", train-size: "\
                             + str(10 - test_size) + ")"
                 if i in scores.keys():
+                    start_time = time.time()
                     new_score, new_cf = classifier.classify(model_type, test_size/10)
+                    print("\n\n--- %s classify seconds ---\n\n" % (time.time() - start_time))
                     scores[i] += new_score
                     confusion_matrices[i] += numpy.array(new_cf)
                 else:
