@@ -50,8 +50,9 @@ class Main:
         # "..\\training-data-with-other-idle-discrete"
         # "..\\training-data-continued"
         # "..\\training-data-with-other-idle-continued"
-        training_data = DataRetriever.retrieve_training_data("..\\training-data-discrete")
-        test_data = DataRetriever.retrieve_test_data("..\\test-data")
+        # "../training-data-discrete" in linux
+        training_data = DataRetriever.retrieve_training_data("../training-data-discrete")
+        test_data = DataRetriever.retrieve_test_data("../test-data")
 
         classifier = Classifier(training_data, test_data, num_actions_dict, actions_num_dict)
         # classifier.compute_features()
