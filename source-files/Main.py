@@ -32,17 +32,27 @@ class Main:
     actions_num_dict2 = {'IDLE': 0, 'OTHER': 1, 'BF_HU': 2, 'BR_LHU': 3,
                         'BL_RHU': 4, 'BB_HH': 5}
     training_path2 = "training-data-with-other-idle-discrete"
+    num_actions_dict3 = {0: 'IDLE/OTHER', 1: 'BF_HU', 2: 'BR_LHU',
+                         3: 'BL_RHU', 4: 'BB_HH'}
+    actions_num_dict3 = {'IDLE': 0, 'OTHER': 0, 'BF_HU': 1, 'BR_LHU': 2,
+                         'BL_RHU': 3, 'BB_HH': 4}
+    training_path3 = "training-data-with-other-idle-discrete"
 
-    num_actions_dict3 = {0: 'LWR_C', 1: 'RWR_CC',
+    num_actions_dict4 = {0: 'LWR_C', 1: 'RWR_CC',
                         2: 'WR_HU', 3: 'WR_HD'}
-    actions_num_dict3 = {'LWR_C': 0, 'RWR_CC': 1,
+    actions_num_dict4 = {'LWR_C': 0, 'RWR_CC': 1,
                         'WR_HU': 2, 'WR_HD': 3}
-    training_path3 = "training-data-continued"
-    num_actions_dict4 = {0: 'IDLE', 1: 'OTHER', 2: 'LWR_C', 3: 'RWR_CC',
+    training_path4 = "training-data-continued"
+    num_actions_dict5 = {0: 'IDLE', 1: 'OTHER', 2: 'LWR_C', 3: 'RWR_CC',
                         4: 'WR_HU', 5: 'WR_HD'}
-    actions_num_dict4 = {'IDLE': 0, 'OTHER': 1, 'LWR_C': 2, 'RWR_CC': 3,
+    actions_num_dict5 = {'IDLE': 0, 'OTHER': 1, 'LWR_C': 2, 'RWR_CC': 3,
                         'WR_HU': 4, 'WR_HD': 5}
-    training_path4 = "training-data-with-other-idle-continued"
+    training_path5 = "training-data-with-other-idle-continued"
+    num_actions_dict6 = {0: 'IDLE/OTHER', 1: 'LWR_C', 2: 'RWR_CC',
+                         3: 'WR_HU', 4: 'WR_HD'}
+    actions_num_dict6 = {'IDLE': 0, 'OTHER': 0, 'LWR_C': 1, 'RWR_CC': 2,
+                         'WR_HU': 3, 'WR_HD': 4}
+    training_path6 = "training-data-with-other-idle-continued"
 
     test_path = "test-data"
 
@@ -83,6 +93,14 @@ class Main:
             num_actions_dict = num_actions_dict4
             actions_num_dict = actions_num_dict4
             training_path = training_path4
+        elif actions == 5:
+            num_actions_dict = num_actions_dict5
+            actions_num_dict = actions_num_dict5
+            training_path = training_path5
+        elif actions == 6:
+            num_actions_dict = num_actions_dict6
+            actions_num_dict = actions_num_dict6
+            training_path = training_path6
 
         start_time = time.time()
         training_path = ".." + os.sep + training_path
