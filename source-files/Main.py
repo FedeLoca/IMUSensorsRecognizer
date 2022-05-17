@@ -129,7 +129,7 @@ class Main:
             ax.xaxis.set_ticklabels(list(num_actions_dict.values()))
             ax.yaxis.set_ticklabels(list(num_actions_dict.values()))
             # plt.savefig('confusion_matrix.png')
-            plt.show()
+            plt.show(block=True)
             '''
 
             if scores[i] == best:
@@ -143,4 +143,4 @@ class Main:
         plt.xlabel('training size')
         plt.title("Average accuracy plot for " + model_type + " with " + str(tries)+ " tries")
         # plt.savefig('scores.png')
-        plt.show()
+        plt.show(block=True)
