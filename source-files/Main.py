@@ -51,12 +51,13 @@ class Main:
     window_dim = 500  # in milliseconds
     actions = 1
     save = False
+    tries = 5
 
     if __name__ == "__main__":
 
         print(sys.argv[1:])
         if len(sys.argv) > 1:
-            _, model_type, window_dim, actions, save = sys.argv
+            _, model_type, window_dim, actions, tries, save = sys.argv
             window_dim = int(window_dim)
             actions = int(actions)
 
@@ -103,7 +104,6 @@ class Main:
         scores = dict()
         confusion_matrices = dict()
         params = dict()
-        tries = 5
         for t in range(tries):
             i = 0
             for test_size in range(1, 10):
