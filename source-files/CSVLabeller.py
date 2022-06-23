@@ -61,23 +61,35 @@ if __name__ == "__main__":
             labelled = False
             while not labelled:
                 acc_row = next(acc_reader)
-                split_row = acc_row[0].split(",")
-                timestamp = float(split_row[1][-7:-1].replace(":", "."))
-                print("Timestamp " + str(timestamp))
-                if "ciak" in label and timestamp == bookmark:
-                    new_acc_row = acc_row[0] + ",\"" + label + "\""
-                    labelled = True
-                elif "start" in label and timestamp >= bookmark \
-                        and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
-                    new_acc_row = acc_row[0] + ",\"" + label + "\""
-                    labelled = True
-                elif "end" in label and timestamp >= bookmark \
-                        and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
-                    new_acc_row = acc_row[0] + ",\"" + label + "\""
-                    labelled = True
+                print(acc_row)
+                if acc_row.__len__() == CSVLabeller.header_len:
+                    timestamp = float(acc_row[1][-6:].replace(":", "."))
+
+                    acc_row[1] = "\"" + acc_row[1] + "\""
+                    acc_row[2] = "\"" + acc_row[2] + "\""
+                    acc_row[3] = "\"" + acc_row[3] + "\""
+                    acc_row[4] = "\"" + acc_row[4] + "\""
+
+                    print("Timestamp " + str(timestamp))
+                    if timestamp >= bookmark \
+                            and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
+                        new_acc_row = ",".join(acc_row) + ",\"" + label + "\""
+                        labelled = True
+                    else:
+                        new_acc_row = ",".join(acc_row)
+                    acc_writer.writerow([new_acc_row])
                 else:
-                    new_acc_row = acc_row[0]
-                acc_writer.writerow([new_acc_row])
+                    split_row = acc_row[0].split(",")
+                    timestamp = float(split_row[1][-7:-1].replace(":", "."))
+
+                    print("Timestamp " + str(timestamp))
+                    if timestamp >= bookmark \
+                            and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
+                        new_acc_row = acc_row[0] + ",\"" + label + "\""
+                        labelled = True
+                    else:
+                        new_acc_row = acc_row[0]
+                    acc_writer.writerow([new_acc_row])
 
         for acc_row in acc_reader:
             acc_writer.writerow(acc_row)
@@ -91,23 +103,34 @@ if __name__ == "__main__":
             labelled = False
             while not labelled:
                 gyro_row = next(gyro_reader)
-                split_row = gyro_row[0].split(",")
-                timestamp = float(split_row[1][-7:-1].replace(":", "."))
-                #print("Timestamp " + str(timestamp))
-                if "ciak" in label and timestamp == bookmark:
-                    new_gyro_row = gyro_row[0] + ",\"" + label + "\""
-                    labelled = True
-                elif "start" in label and timestamp >= bookmark \
-                        and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
-                    new_gyro_row = gyro_row[0] + ",\"" + label + "\""
-                    labelled = True
-                elif "end" in label and timestamp >= bookmark \
-                        and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
-                    new_gyro_row = gyro_row[0] + ",\"" + label + "\""
-                    labelled = True
+                if gyro_row.__len__() == CSVLabeller.header_len:
+                    timestamp = float(gyro_row[1][-6:].replace(":", "."))
+
+                    gyro_row[1] = "\"" + gyro_row[1] + "\""
+                    gyro_row[2] = "\"" + gyro_row[2] + "\""
+                    gyro_row[3] = "\"" + gyro_row[3] + "\""
+                    gyro_row[4] = "\"" + gyro_row[4] + "\""
+
+                    print("Timestamp " + str(timestamp))
+                    if timestamp >= bookmark \
+                            and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
+                        new_gyro_row = ",".join(gyro_row) + ",\"" + label + "\""
+                        labelled = True
+                    else:
+                        new_gyro_row = ",".join(gyro_row)
+                    gyro_writer.writerow([new_gyro_row])
                 else:
-                    new_gyro_row = gyro_row[0]
-                gyro_writer.writerow([new_gyro_row])
+                    split_row = gyro_row[0].split(",")
+                    timestamp = float(split_row[1][-7:-1].replace(":", "."))
+
+                    # print("Timestamp " + str(timestamp))
+                    if timestamp >= bookmark \
+                            and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
+                        new_gyro_row = gyro_row[0] + ",\"" + label + "\""
+                        labelled = True
+                    else:
+                        new_gyro_row = gyro_row[0]
+                    gyro_writer.writerow([new_gyro_row])
 
         for gyro_row in gyro_reader:
             gyro_writer.writerow(gyro_row)

@@ -44,7 +44,8 @@ if __name__ == "__main__":
             isHeader = True
             for row in datareader:
                 if not isHeader:
-                    split_row = row[0].split(",")
+                    cleaned_row = row[0].replace(";", "")
+                    split_row = cleaned_row.split(",")
                     if split_row.__len__() == (CSVSplitter.header_len + 1):
                         if split_row[CSVSplitter.header_len] == "ciak":
                             real_row = ",".join([split_row[i] for i in range(CSVSplitter.header_len)])
@@ -61,7 +62,7 @@ if __name__ == "__main__":
 
                                 gesture_number = split_extra_column[1]
                                 gesture_name = split_extra_column[2]
-                                if "NO" in split_row[CSVSplitter.header_len]:
+                                if "no" in split_row[CSVSplitter.header_len] or "NO" in split_row[CSVSplitter.header_len]:
                                     folder_path = "." + os.sep + split_file_name[2] + "-INVALID-" + gesture_name + "-" \
                                                   + split_file_name[3] + "." + gesture_number
                                 else:
@@ -86,7 +87,7 @@ if __name__ == "__main__":
                                 new_file, writer = CSVSplitter.create_new_file(folder_path, new_file_name)
                                 print("Start writing " + new_file_name)
                     else:
-                        writer.writerow(row)
+                        writer.writerow([cleaned_row])
                 else:
                     isHeader = False
         new_file.close()
