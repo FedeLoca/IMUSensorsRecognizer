@@ -61,7 +61,7 @@ if __name__ == "__main__":
             labelled = False
             while not labelled:
                 acc_row = next(acc_reader)
-                print(acc_row)
+                #print(acc_row)
                 if acc_row.__len__() == CSVLabeller.header_len:
                     timestamp = float(acc_row[1][-6:].replace(":", "."))
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                     acc_row[4] = "\"" + acc_row[4] + "\""
 
                     print("Timestamp " + str(timestamp))
-                    if timestamp >= bookmark \
+                    if (timestamp >= bookmark or (int(timestamp) == 0 and int(bookmark) == 59)) \
                             and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
                         new_acc_row = ",".join(acc_row) + ",\"" + label + "\""
                         labelled = True
@@ -83,7 +83,7 @@ if __name__ == "__main__":
                     timestamp = float(split_row[1][-7:-1].replace(":", "."))
 
                     print("Timestamp " + str(timestamp))
-                    if timestamp >= bookmark \
+                    if (timestamp >= bookmark or (int(timestamp) == 0 and int(bookmark) == 59)) \
                             and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
                         new_acc_row = acc_row[0] + ",\"" + label + "\""
                         labelled = True
@@ -92,7 +92,15 @@ if __name__ == "__main__":
                     acc_writer.writerow([new_acc_row])
 
         for acc_row in acc_reader:
-            acc_writer.writerow(acc_row)
+            if acc_row.__len__() == CSVLabeller.header_len:
+                acc_row[1] = "\"" + acc_row[1] + "\""
+                acc_row[2] = "\"" + acc_row[2] + "\""
+                acc_row[3] = "\"" + acc_row[3] + "\""
+                acc_row[4] = "\"" + acc_row[4] + "\""
+                acc_row = ",".join(acc_row)
+            else:
+                acc_row = acc_row[0]
+            acc_writer.writerow([acc_row])
         new_acc_file.close()
 
     with open(gyro_path, 'r') as gyro_file:
@@ -112,7 +120,7 @@ if __name__ == "__main__":
                     gyro_row[4] = "\"" + gyro_row[4] + "\""
 
                     print("Timestamp " + str(timestamp))
-                    if timestamp >= bookmark \
+                    if (timestamp >= bookmark or (int(timestamp) == 0 and int(bookmark) == 59)) \
                             and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
                         new_gyro_row = ",".join(gyro_row) + ",\"" + label + "\""
                         labelled = True
@@ -123,8 +131,8 @@ if __name__ == "__main__":
                     split_row = gyro_row[0].split(",")
                     timestamp = float(split_row[1][-7:-1].replace(":", "."))
 
-                    # print("Timestamp " + str(timestamp))
-                    if timestamp >= bookmark \
+                    print("Timestamp " + str(timestamp))
+                    if (timestamp >= bookmark or (int(timestamp) == 0 and int(bookmark) == 59)) \
                             and (int(timestamp) == int(bookmark) or int(timestamp) == (int(bookmark) + 1) % 60):
                         new_gyro_row = gyro_row[0] + ",\"" + label + "\""
                         labelled = True
@@ -133,5 +141,13 @@ if __name__ == "__main__":
                     gyro_writer.writerow([new_gyro_row])
 
         for gyro_row in gyro_reader:
-            gyro_writer.writerow(gyro_row)
+            if gyro_row.__len__() == CSVLabeller.header_len:
+                gyro_row[1] = "\"" + gyro_row[1] + "\""
+                gyro_row[2] = "\"" + gyro_row[2] + "\""
+                gyro_row[3] = "\"" + gyro_row[3] + "\""
+                gyro_row[4] = "\"" + gyro_row[4] + "\""
+                gyro_row = ",".join(gyro_row)
+            else:
+                gyro_row = gyro_row[0]
+            gyro_writer.writerow([gyro_row])
         new_gyro_file.close()
