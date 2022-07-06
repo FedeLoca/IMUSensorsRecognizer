@@ -1,4 +1,6 @@
 import collections
+import csv
+
 import pandas
 import os
 from TrainingSample import TrainingSample
@@ -21,23 +23,26 @@ class DataRetriever:
         # retrieve the paths of the files in it. Each file represent a set of collected data for a specific sensor
         # (accelerometer or gyroscope) for a specific MetaWear device
         file_paths_list = [os.path.abspath(name) for name in os.listdir(folder_path)]
-        acc_data = dict()
-        gyro_data = dict()
+        gyro_data = None
+        acc_data = None
+        file_name = None
         for i in range(0, file_paths_list.__len__()):  # for each file
             # parse the path to retrieve the file name
             file_name = file_paths_list[i].split(os.sep)[-1]
             if "ACC" in file_name:  # if the file name contains ACC it means it contains accelerometer data
-                # so read the data and store it in the acc_data dict associated with the device MAC address
                 df = pandas.read_csv(file_paths_list[i])
                 df.dropna(inplace=True)
                 df.reset_index(drop=True, inplace=True)
-                acc_data[file_name.split("-")[0]] = df
+                acc_data = df
             else:  # otherwise, it contains gyroscope data
-                # so read the data and store it in the gyro_data dict associated with the device MAC address
                 df = pandas.read_csv(file_paths_list[i])
                 df.dropna(inplace=True)
                 df.reset_index(drop=True, inplace=True)
-                gyro_data[file_name.split("-")[0]] = df
+                gyro_data = df
+
+        if abs(len(acc_data.index) - len(gyro_data.index)) > 10:
+            print(file_name)
+
         return acc_data, gyro_data
 
     @staticmethod
@@ -52,7 +57,7 @@ class DataRetriever:
             # go inside it and retrieve the data using pandas
             acc_data, gyro_data = DataRetriever.retrieve_data(k, v)
             # remove digits from the folder name obtaining the ACTION name
-            action_name = ''.join([i for i in k if not i.isdigit()])
+            action_name = k.split("-")[1]
             # store the SAMPLE data (encapsulated in a Sample object) in a dictionary associating it to its ACTION name
             samples[action_name].append(TrainingSample(action_name, acc_data, gyro_data))
             os.chdir("..")

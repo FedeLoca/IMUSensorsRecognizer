@@ -7,6 +7,6 @@ class TrainingSample(Sample):
         self.action_name = action_name
 
     def __str__(self):
-        s = self.action_name + ": (Number of sensors: " + str(self.acc_data.__len__()) + ")\n"
+        s = self.action_name + "\n"
         s += super().print_data()
         return s

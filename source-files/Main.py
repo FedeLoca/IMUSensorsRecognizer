@@ -8,60 +8,73 @@ from DataRetriever import DataRetriever
 from Classifier import Classifier
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 
 
 class Main:
 
-    # basin forward, hands up = BF-HU
-    # basin right, left hand up = BR-LHU
-    # basin left, right hand up = BL-RHU
-    # basin back, hands on hips = BB-HH
-    # left wrist rotation clockwise = LWR_C
-    # right wrist rotation counter-clockwise = RWR_CC
-    # wrist rotation hands up = WR_HU
-    # wrist rotation hands down = WR_HD
-
-    num_actions_dict1 = {0: 'BF_HU', 1: 'BR_LHU',
-                        2: 'BL_RHU', 3: 'BB_HH'}
-    actions_num_dict1 = {'BF_HU': 0, 'BR_LHU': 1,
-                        'BL_RHU': 2, 'BB_HH': 3}
-    training_path1 = "training-data-discrete"
-    num_actions_dict2 = {0: 'IDLE', 1: 'OTHER', 2: 'BF_HU', 3: 'BR_LHU',
-                        4: 'BL_RHU', 5: 'BB_HH'}
-    actions_num_dict2 = {'IDLE': 0, 'OTHER': 1, 'BF_HU': 2, 'BR_LHU': 3,
-                        'BL_RHU': 4, 'BB_HH': 5}
-    training_path2 = "training-data-with-other-idle-discrete"
-    num_actions_dict3 = {0: 'IDLE/OTHER', 1: 'BF_HU', 2: 'BR_LHU',
-                         3: 'BL_RHU', 4: 'BB_HH'}
-    actions_num_dict3 = {'IDLE': 0, 'OTHER': 0, 'BF_HU': 1, 'BR_LHU': 2,
-                         'BL_RHU': 3, 'BB_HH': 4}
-    training_path3 = "training-data-with-other-idle-discrete"
-
-    num_actions_dict4 = {0: 'LWR_C', 1: 'RWR_CC',
-                        2: 'WR_HU', 3: 'WR_HD'}
-    actions_num_dict4 = {'LWR_C': 0, 'RWR_CC': 1,
-                        'WR_HU': 2, 'WR_HD': 3}
-    training_path4 = "training-data-continued"
-    num_actions_dict5 = {0: 'IDLE', 1: 'OTHER', 2: 'LWR_C', 3: 'RWR_CC',
-                        4: 'WR_HU', 5: 'WR_HD'}
-    actions_num_dict5 = {'IDLE': 0, 'OTHER': 1, 'LWR_C': 2, 'RWR_CC': 3,
-                        'WR_HU': 4, 'WR_HD': 5}
-    training_path5 = "training-data-with-other-idle-continued"
-    num_actions_dict6 = {0: 'IDLE/OTHER', 1: 'LWR_C', 2: 'RWR_CC',
-                         3: 'WR_HU', 4: 'WR_HD'}
-    actions_num_dict6 = {'IDLE': 0, 'OTHER': 0, 'LWR_C': 1, 'RWR_CC': 2,
-                         'WR_HU': 3, 'WR_HD': 4}
-    training_path6 = "training-data-with-other-idle-continued"
-
     test_path = "test-data"
+
+    # left = L
+    # right = R
+    # up = U
+    # down = D
+    # forward = F
+    # back = B
+    # bit up = BU
+    # bit left = BL
+    # very up = VU
+    # very left = VL
+    # turn = T
+
+    num_actions_dict1 = {0: 'left', 1: 'right',
+                         2: 'forward', 3: 'turn'}
+    actions_num_dict1 = {'left': 0, 'right': 1,
+                         'forward': 2, 'turn': 3}
+    training_path1 = "P1-data"
+
+    num_actions_dict2 = {0: 'left', 1: 'right',
+                         2: 'forward', 3: 'turn', 4: 'other'}
+    actions_num_dict2 = {'left': 0, 'right': 1,
+                         'forward': 2, 'turn': 3, 'other': 4}
+    training_path2 = "P1-data-O"
+
+    num_actions_dict3 = {0: 'bitleft', 1: 'veryleft',
+                         2: 'bitup', 3: 'veryup'}
+    actions_num_dict3 = {'bitleft': 0, 'veryleft': 1,
+                         'bitup': 2, 'veryup': 3}
+    training_path3 = "P2-data"
+
+    num_actions_dict4 = {0: 'bitleft', 1: 'veryleft',
+                         2: 'bitup', 3: 'veryup', 4: 'other'}
+    actions_num_dict4 = {'bitleft': 0, 'veryleft': 1,
+                         'bitup': 2, 'veryup': 3, 'other': 4}
+    training_path4 = "P2-data-O"
+
+    num_actions_dict5 = {0: 'left', 1: 'right',
+                         2: 'up', 3: 'turn'}
+    actions_num_dict5 = {'left': 0, 'right': 1,
+                         'up': 2, 'turn': 3}
+    training_path5 = "P3-data"
+
+    num_actions_dict6 = {0: 'left', 1: 'right',
+                         2: 'up', 3: 'turn', 4: 'other'}
+    actions_num_dict6 = {'left': 0, 'right': 1,
+                         'up': 2, 'turn': 3, 'other': 4}
+    training_path6 = "P3-data-O"
+
+    num_actions_dicts = [num_actions_dict1, num_actions_dict2, num_actions_dict3, num_actions_dict4,
+                         num_actions_dict5, num_actions_dict6]
+    actions_num_dicts = [actions_num_dict1, actions_num_dict2, actions_num_dict3, actions_num_dict4,
+                         actions_num_dict5, actions_num_dict6]
+    training_paths = [training_path1, training_path2, training_path3, training_path4, training_path5,
+                      training_path6]
 
     model_type = 'k-nn'
     # model_type = 'random-forest'
-    window_dim = 500  # in milliseconds
+    window_dim = 0  # in milliseconds
     actions = 1
-    save = False
-    tries = 5
+    save = True
+    tries = 10
 
     if __name__ == "__main__":
 
@@ -75,35 +88,12 @@ class Main:
         if save == 't':
             save = True
 
-        num_actions_dict = num_actions_dict1
-        actions_num_dict = actions_num_dict1
-        training_path = training_path1
-        if actions == 1:
-            num_actions_dict = num_actions_dict1
-            actions_num_dict = actions_num_dict1
-            training_path = training_path1
-        elif actions == 2:
-            num_actions_dict = num_actions_dict2
-            actions_num_dict = actions_num_dict2
-            training_path = training_path2
-        elif actions == 3:
-            num_actions_dict = num_actions_dict3
-            actions_num_dict = actions_num_dict3
-            training_path = training_path3
-        elif actions == 4:
-            num_actions_dict = num_actions_dict4
-            actions_num_dict = actions_num_dict4
-            training_path = training_path4
-        elif actions == 5:
-            num_actions_dict = num_actions_dict5
-            actions_num_dict = actions_num_dict5
-            training_path = training_path5
-        elif actions == 6:
-            num_actions_dict = num_actions_dict6
-            actions_num_dict = actions_num_dict6
-            training_path = training_path6
+        num_actions_dict = num_actions_dicts[actions]
+        actions_num_dict = actions_num_dicts[actions]
+        training_path = training_paths[actions]
 
         start_time = time.time()
+        training_path_name = training_path
         training_path = ".." + os.sep + training_path
         training_data = DataRetriever.retrieve_training_data(training_path)
         # test_path = ".." + os.sep + test_path
@@ -143,10 +133,10 @@ class Main:
         best = max(scores.values())
         best_string = "Best for "
         print("\n\nScores...")
+        images_folder = training_path_name + "-tries_" + str(tries) + "-model_" + model_type
         for i in range(0, len(scores)):
             print("Score for " + params[i] + ": " + str(scores[i]))
 
-            '''
             # plot confusion matrix
             print(confusion_matrices[i])
             ax = sns.heatmap(confusion_matrices[i], annot=True, cmap='Blues')
@@ -156,9 +146,11 @@ class Main:
             ax.xaxis.set_ticklabels(list(num_actions_dict.values()))
             ax.yaxis.set_ticklabels(list(num_actions_dict.values()))
             if save:
-                plt.savefig(".." + os.sep + ".." + os.sep + "confusion-matrix.png")
+                if not os.path.exists(".." + os.sep + "Images" + os.sep + images_folder):
+                    os.makedirs(".." + os.sep + "Images" + os.sep + images_folder)
+                plt.savefig(".." + os.sep + "Images" + os.sep + images_folder + os.sep +
+                            "confusion-matrix" + str(i) + ".png")
             plt.show()
-            '''
 
             if scores[i] == best:
                 best_string += params[i] + ", "
@@ -166,10 +158,20 @@ class Main:
 
         # plot scores
         training_sizes = [x for x in range(9, 0, -1)]
-        plt.plot(training_sizes, list(scores.values())[::-1], color='b', marker='o', linestyle='-', linewidth=2, markersize=5)
+        fig, ax = plt.subplots()
+        plt.plot(training_sizes, list(scores.values())[::-1], color='b', marker='o', linestyle='-',
+                 linewidth=2, markersize=5)
+
+        rounded_scores = [round(x, 4) for x in list(scores.values())]
+        print(rounded_scores)
+        for i in range(scores.values().__len__()):
+            ax.annotate(rounded_scores[::-1][i],
+                        xy=(training_sizes[i], list(scores.values())[::-1][i]))
         plt.ylabel('accuracy')
         plt.xlabel('training size')
-        plt.title("Average accuracy plot for " + model_type + " with " + str(tries)+ " tries")
+        plt.title("Average accuracy plot for " + model_type + " with " + str(tries) + " tries")
         if save:
-            plt.savefig(".." + os.sep + ".." + os.sep + "scores.png")
+            if not os.path.exists(".." + os.sep + "Images" + os.sep + images_folder):
+                os.makedirs(".." + os.sep + "Images" + os.sep + images_folder)
+            plt.savefig(".." + os.sep + "Images" + os.sep + images_folder + os.sep + "scores.png")
         plt.show()

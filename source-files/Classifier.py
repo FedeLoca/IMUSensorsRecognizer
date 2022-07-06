@@ -1,4 +1,3 @@
-import collections
 import math
 
 import numpy as np
@@ -16,7 +15,6 @@ from TrainingSample import TrainingSample
 
 
 class Classifier:
-
     # [3 (axes) * 2 (sensors) * 11 (features) + 1 (magnitude) * 2 (sensors)] * 3 (devices)
     max_features_n = 204
 
@@ -46,7 +44,8 @@ class Classifier:
             x_test.extend(x_test_el)
             y_test.extend(y_test_el)
         x_train = np.array(x_train)
-        x_train = np.delete(x_train, np.s_[len(self.feature_names):], 1)  # remove data lengths as they are not feat.
+        # x_train_lengths = x_train[:, len(self.feature_names):]
+        x_train = np.delete(x_train, np.s_[len(self.feature_names):], 1)  # remove data lengths as they are not features
         y_train = np.array(y_train)
         x_test = np.array(x_test)
         x_test_lengths = x_test[:, len(self.feature_names):]
@@ -59,11 +58,12 @@ class Classifier:
         print("### Train samples percentage: " + str((1 - test_size) * 100) + "%")
         valid_windows_n = len(self.valid_windows)
         invalid_windows_n = len(self.invalid_windows)
-        print("### Total windows: " + str(valid_windows_n + invalid_windows_n))
-        print("### Valid windows: " + str(valid_windows_n))
-        print("### Invalid windows: " + str(invalid_windows_n))
-        invalid_windows_perc = (invalid_windows_n/(valid_windows_n + invalid_windows_n)) * 100
-        print("### Invalid windows percentage: " + str(invalid_windows_perc) + "%")
+        if valid_windows_n + invalid_windows_n > 0:
+            print("### Total windows: " + str(valid_windows_n + invalid_windows_n))
+            print("### Valid windows: " + str(valid_windows_n))
+            print("### Invalid windows: " + str(invalid_windows_n))
+            invalid_windows_perc = (invalid_windows_n / (valid_windows_n + invalid_windows_n)) * 100
+            print("### Invalid windows percentage: " + str(invalid_windows_perc) + "%")
 
         model = None
         if model_type == 'k-nn':
@@ -85,10 +85,10 @@ class Classifier:
         print("\nTest...")
         prediction = model.predict(x_test)
         confusion_matrix = skm.confusion_matrix(y_test, prediction)
-        # for i in range(0, len(y_test)):
-            # print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
-        # print("Test samples: " + str(y_test))
-        # print("Prediction: " + str(prediction))
+        for i in range(0, len(y_test)):
+            print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
+            #  print("Test samples: " + str(y_test))
+            #  print("Prediction: " + str(prediction))
         score = model.score(x_test, y_test)
         print("Score: " + str(score))
 
@@ -152,115 +152,112 @@ class Classifier:
 
     def compute_row(self, sample, row_number):
         row = list()
-        for sensor_i in range(0, sample.sensors_num):
-            acc_x, acc_y, acc_z = sample.get_acc_axes(sensor_i)
-            gyro_x, gyro_y, gyro_z = sample.get_gyro_axes(sensor_i)
-            axes = [acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z]
-            sensor_names = list(sample.acc_data.keys())
-            axes_names = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
+        acc_x, acc_y, acc_z = sample.get_acc_axes()
+        gyro_x, gyro_y, gyro_z = sample.get_gyro_axes()
+        axes = [acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z]
+        axes_names = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
 
-            # FEATURES
-            # mean
-            i = 0
-            for a in axes:
-                row.append(np.mean(a))
-                if row_number == 0:
-                    self.feature_names.append("mean " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # variance
-            i = 0
-            for a in axes:
-                row.append(np.var(a))
-                if row_number == 0:
-                    self.feature_names.append("variance " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # standard deviation
-            i = 0
-            for a in axes:
-                row.append(np.std(a))
-                if row_number == 0:
-                    self.feature_names.append("standard deviation " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # mean squared error
-            # i = 0
-            # for a in axes:
-            #    row.append(skm.mean_squared_error(observed, predicted))
-            #    if sample_num == 0:
-            #       self.feature_names.append("mean squared error " + "-" + axes_names[i] + "-" + sensor_names[sensor_num])
-            #       i += 1
-            # kurtosis
-            i = 0
-            for a in axes:
-                row.append(sps.kurtosis(a))
-                if row_number == 0:
-                    self.feature_names.append("kurtosis " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # symmetry
-            i = 0
-            for a in axes:
-                row.append(f.symmetry(a))
-                if row_number == 0:
-                    self.feature_names.append("symmetry " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # zero-crossing rate
-            i = 0
-            for a in axes:
-                row.append(f.zero_crossing(a))
-                if row_number == 0:
-                    self.feature_names.append("zero-crossing rate " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # difference between max and min
-            i = 0
-            for a in axes:
-                row.append(f.min_max_diff(a))
-                if row_number == 0:
-                    self.feature_names.append("max-min " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # number of peaks
-            i = 0
-            for a in axes:
-                row.append(f.peaks_number(a))
-                if row_number == 0:
-                    self.feature_names.append("peaks " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # energy
-            i = 0
-            for a in axes:
-                row.append(f.energy(a))
-                if row_number == 0:
-                    self.feature_names.append("energy " + "-" + axes_names[i] + "-" + sensor_names[sensor_i])
-                    i += 1
-            # pearson correlation
-            row.append(f.correlation(acc_x, acc_y))
-            row.append(f.correlation(acc_y, acc_z))
-            row.append(f.correlation(acc_x, acc_z))
-            row.append(f.correlation(gyro_x, gyro_y))
-            row.append(f.correlation(gyro_y, gyro_z))
-            row.append(f.correlation(gyro_x, gyro_z))
+        # FEATURES
+        # mean
+        i = 0
+        for a in axes:
+            row.append(np.mean(a))
             if row_number == 0:
-                self.feature_names.append("acc correlation xy-" + sensor_names[sensor_i])
-                self.feature_names.append("acc correlation yz-" + sensor_names[sensor_i])
-                self.feature_names.append("acc correlation xz-" + sensor_names[sensor_i])
-                self.feature_names.append("gyro correlation xy-" + sensor_names[sensor_i])
-                self.feature_names.append("acc correlation yz-" + sensor_names[sensor_i])
-                self.feature_names.append("acc correlation xz-" + sensor_names[sensor_i])
-            # magnitude
-            row.append(f.magnitude(acc_x, acc_y, acc_z))
-            row.append(f.magnitude(gyro_x, gyro_y, gyro_z))
+                self.feature_names.append("mean " + "-" + axes_names[i])
+                i += 1
+        # variance
+        i = 0
+        for a in axes:
+            row.append(np.var(a))
             if row_number == 0:
-                self.feature_names.append("acc magnitude-" + sensor_names[sensor_i])
-                self.feature_names.append("gyro magnitude-" + sensor_names[sensor_i])
+                self.feature_names.append("variance " + "-" + axes_names[i])
+                i += 1
+        # standard deviation
+        i = 0
+        for a in axes:
+            row.append(np.std(a))
+            if row_number == 0:
+                self.feature_names.append("standard deviation " + "-" + axes_names[i])
+                i += 1
+        # mean squared error
+        # i = 0
+        # for a in axes:
+        #    row.append(skm.mean_squared_error(observed, predicted))
+        #    if sample_num == 0:
+        #       self.feature_names.append("mean squared error " + "-" + axes_names[i])
+        #       i += 1
+        # kurtosis
+        i = 0
+        for a in axes:
+            row.append(sps.kurtosis(a))
+            if row_number == 0:
+                self.feature_names.append("kurtosis " + "-" + axes_names[i])
+                i += 1
+        # symmetry
+        i = 0
+        for a in axes:
+            row.append(f.symmetry(a))
+            if row_number == 0:
+                self.feature_names.append("symmetry " + "-" + axes_names[i])
+                i += 1
+        # zero-crossing rate
+        i = 0
+        for a in axes:
+            row.append(f.zero_crossing(a))
+            if row_number == 0:
+                self.feature_names.append("zero-crossing rate " + "-" + axes_names[i])
+                i += 1
+        # difference between max and min
+        i = 0
+        for a in axes:
+            row.append(f.min_max_diff(a))
+            if row_number == 0:
+                self.feature_names.append("max-min " + "-" + axes_names[i])
+                i += 1
+        # number of peaks
+        i = 0
+        for a in axes:
+            row.append(f.peaks_number(a))
+            if row_number == 0:
+                self.feature_names.append("peaks " + "-" + axes_names[i])
+                i += 1
+        # energy
+        i = 0
+        for a in axes:
+            row.append(f.energy(a))
+            if row_number == 0:
+                self.feature_names.append("energy " + "-" + axes_names[i])
+                i += 1
+        # pearson correlation
+        row.append(f.correlation(acc_x, acc_y))
+        row.append(f.correlation(acc_y, acc_z))
+        row.append(f.correlation(acc_x, acc_z))
+        row.append(f.correlation(gyro_x, gyro_y))
+        row.append(f.correlation(gyro_y, gyro_z))
+        row.append(f.correlation(gyro_x, gyro_z))
+        if row_number == 0:
+            self.feature_names.append("acc correlation xy")
+            self.feature_names.append("acc correlation yz")
+            self.feature_names.append("acc correlation xz")
+            self.feature_names.append("gyro correlation xy")
+            self.feature_names.append("acc correlation yz")
+            self.feature_names.append("acc correlation xz")
+        # magnitude
+        row.append(f.magnitude(acc_x, acc_y, acc_z))
+        row.append(f.magnitude(gyro_x, gyro_y, gyro_z))
+        if row_number == 0:
+            self.feature_names.append("acc magnitude")
+            self.feature_names.append("gyro magnitude")
 
-        for sensor_i in range(0, sample.sensors_num):
-            acc_x, _, _ = sample.get_acc_axes(sensor_i)
-            gyro_x, _, _ = sample.get_gyro_axes(sensor_i)
-            # append data length to keep track of it and be able to associate it with prediction success
-            row.append(len(acc_x))
-            row.append(len(gyro_x))
+        acc_x, _, _ = sample.get_acc_axes()
+        gyro_x, _, _ = sample.get_gyro_axes()
+        # append data length to keep track of it and be able to associate it with prediction success
+        row.append(len(acc_x))
+        row.append(len(gyro_x))
 
         for i in range(0, len(row)):
             if math.isnan(row[i]) or math.isinf(row[i]):
-                print(self.feature_names[i])
+                print("Invalid: " + self.feature_names[i])
 
         return row
 
@@ -268,90 +265,40 @@ class Classifier:
         windows = list()
         acc_data = sample.acc_data
         gyro_data = sample.acc_data
-        sensors_num = len(acc_data.values())
 
         # start splitting when all sensors started collecting data and finish when any sensor stopped collecting data
-        first_epoch = 0
-        last_epoch = 0
-        if sensors_num > 0:
-            first_epoch = list(acc_data.values())[0]['epoch'].iloc[0]
-            last_epoch = list(acc_data.values())[0]['epoch'].iloc[-1]
-        for df in acc_data.values():
-            epochs = df['epoch']
-            if epochs.iloc[0] > first_epoch:
-                first_epoch = epochs.iloc[0]
-            if epochs.iloc[-1] < last_epoch:
-                last_epoch = epochs.iloc[-1]
+        print(acc_data.columns.tolist())
+        first_epoch = max(acc_data['epoch'].iloc[0], gyro_data['epoch'].iloc[0])
+        last_epoch = min(acc_data['epoch'].iloc[-1], gyro_data['epoch'].iloc[-1])
 
         start_epoch = first_epoch
         end_epoch = start_epoch + window_dim
 
-        last_acc_splits = dict()
-        for (s, df) in acc_data.items():
-            epochs = df['epoch']
-            for i in range(0, len(epochs)):
-                if epochs.iloc[i] >= start_epoch:
-                    last_acc_splits[s] = i
-                    break
+        last_acc_split = start_epoch
+        acc_epochs = acc_data['epoch']
+        for i in range(0, len(acc_epochs)):
+            if acc_epochs.iloc[i] >= start_epoch:
+                last_acc_split = i
+                break
 
-        last_gyro_splits = dict()
-        for (s, df) in gyro_data.items():
-            epochs = df['epoch']
-            for i in range(0, len(epochs)):
-                if epochs.iloc[i] >= start_epoch:
-                    last_gyro_splits[s] = i
-                    break
+        last_gyro_split = start_epoch
+        gyro_epochs = gyro_data['epoch']
+        for i in range(0, len(gyro_epochs)):
+            if gyro_epochs.iloc[i] >= start_epoch:
+                last_gyro_split = i
+                break
 
-        #print("first-last " + str(last_epoch-first_epoch))
-        #print("first tot " + str(first_epoch))
-        #print("last tot " + str(last_epoch))
+        # print("first-last " + str(last_epoch-first_epoch))
+        # print("first tot " + str(first_epoch))
+        # print("last tot " + str(last_epoch))
         while start_epoch < last_epoch:
-            new_acc_data = dict()
-            new_gyro_data = dict()
             valid = True
-            for (s, df) in acc_data.items():
-                epochs = df['epoch']
-                window_data = list()
-                j = 0
-                for i in range(last_acc_splits[s], len(epochs)):
-                    j = i
-                    row = list()
-                    # print(str(start_epoch) + "<=" + str(epochs.iloc[i]) + "<" + str(end_epoch))
-                    if start_epoch <= epochs.iloc[i] < end_epoch:
-                        for col in df.columns:
-                            row.append(df[col].iloc[i])
-                        window_data.append(row)
-                        # print(str(len(window_data)))
-                    else:
-                        break
-                if len(window_data) > 0:
-                    window_df = pd.DataFrame(window_data, columns=df.columns)
-                else:
-                    valid = False
-                    window_df = pd.DataFrame(columns=df.columns)
-                new_acc_data[s] = window_df
-                last_acc_splits[s] = j
 
-            for (s, df) in gyro_data.items():
-                epochs = df['epoch']
-                window_data = list()
-                j = 0
-                for i in range(last_gyro_splits[s], len(epochs)):
-                    j = i
-                    row = list()
-                    if start_epoch <= epochs.iloc[i] < end_epoch:
-                        for col in df.columns:
-                            row.append(df[col].iloc[i])
-                        window_data.append(row)
-                    else:
-                        break
-                if len(window_data) > 0:
-                    window_df = pd.DataFrame(window_data, columns=df.columns)
-                else:
-                    valid = False
-                    window_df = pd.DataFrame(columns=df.columns)
-                new_gyro_data[s] = window_df
-                last_gyro_splits[s] = j
+            new_acc_data, valid = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
+                                                            start_epoch, end_epoch, valid)
+
+            new_gyro_data, valid = Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data,
+                                                             start_epoch, end_epoch, valid)
 
             window = TrainingSample(sample.action_name, new_acc_data, new_gyro_data)
             if valid:
@@ -363,6 +310,27 @@ class Classifier:
             end_epoch = start_epoch + window_dim
 
         return windows
+
+    @staticmethod
+    def extract_window(last_acc_split, acc_epochs, acc_data, start_epoch, end_epoch, valid):
+        window_data = list()
+        for i in range(last_acc_split, len(acc_epochs)):
+            row = list()
+            # print(str(start_epoch) + "<=" + str(epochs.iloc[i]) + "<" + str(end_epoch))
+            if start_epoch <= acc_epochs.iloc[i] < end_epoch:
+                for col in acc_data.columns:
+                    row.append(acc_data[col].iloc[i])
+                window_data.append(row)
+                # print(str(len(window_data)))
+            else:
+                break
+        if len(window_data) > 0:
+            window_df = pd.DataFrame(window_data, columns=acc_data.columns)
+        else:
+            valid = False
+            window_df = pd.DataFrame(columns=acc_data.columns)
+
+        return window_df, valid
 
     '''
     def lstm(self, x_train, y_train, x_test, y_test):
