@@ -50,23 +50,103 @@ class Main:
     training_path4 = "P2-data-O"
 
     num_actions_dict5 = {0: 'left', 1: 'right',
-                         2: 'up', 3: 'turn'}
+                         2: 'up', 3: 'forward'}
     actions_num_dict5 = {'left': 0, 'right': 1,
-                         'up': 2, 'turn': 3}
+                         'up': 2, 'forward': 3}
     training_path5 = "P3-data"
 
     num_actions_dict6 = {0: 'left', 1: 'right',
-                         2: 'up', 3: 'turn', 4: 'other'}
+                         2: 'up', 3: 'forward', 4: 'other'}
     actions_num_dict6 = {'left': 0, 'right': 1,
-                         'up': 2, 'turn': 3, 'other': 4}
+                         'up': 2, 'forward': 3, 'other': 4}
     training_path6 = "P3-data-O"
 
+    num_actions_dict7 = {0: 'left', 1: 'right',
+                         2: 'up', 3: 'down'}
+    actions_num_dict7 = {'left': 0, 'right': 1,
+                         'up': 2, 'down': 3}
+    training_path7 = "P4-data"
+
+    num_actions_dict8 = {0: 'left', 1: 'right',
+                         2: 'up', 3: 'down', 4: 'other'}
+    actions_num_dict8 = {'left': 0, 'right': 1,
+                         'up': 2, 'down': 3, 'other': 4}
+    training_path8 = "P4-data-O"
+
+    num_actions_dict9 = {0: 'left', 1: 'right',
+                         2: 'up', 3: 'forward'}
+    actions_num_dict9 = {'left': 0, 'right': 1,
+                         'up': 2, 'forward': 3}
+    training_path9 = "P5-data"
+
+    num_actions_dict10 = {0: 'left', 1: 'right',
+                         2: 'up', 3: 'forward', 4: 'other'}
+    actions_num_dict10 = {'left': 0, 'right': 1,
+                         'up': 2, 'forward': 3, 'other': 4}
+    training_path10 = "P5-data-O"
+
+    num_actions_dict11 = {0: 'down', 1: 'right',
+                         2: 'up', 3: 'forward'}
+    actions_num_dict11 = {'down': 0, 'right': 1,
+                         'up': 2, 'forward': 3}
+    training_path11 = "P6-data"
+
+    num_actions_dict12 = {0: 'down', 1: 'right',
+                         2: 'up', 3: 'forward', 4: 'other'}
+    actions_num_dict12 = {'down': 0, 'right': 1,
+                         'up': 2, 'forward': 3, 'other': 4}
+    training_path12 = "P6-data-O"
+
+    num_actions_dict13 = {0: 'back', 1: 'right',
+                          2: 'up', 3: 'forward'}
+    actions_num_dict13 = {'back': 0, 'right': 1,
+                          'up': 2, 'forward': 3}
+    training_path13 = "P7-data"
+
+    num_actions_dict14 = {0: 'back', 1: 'right',
+                          2: 'up', 3: 'forward', 4: 'other'}
+    actions_num_dict14 = {'back': 0, 'right': 1,
+                          'up': 2, 'forward': 3, 'other': 4}
+    training_path14 = "P7-data-O"
+
+    num_actions_dict15 = {0: 'left', 1: 'right',
+                          2: 'up', 3: 'forward'}
+    actions_num_dict15 = {'left': 0, 'right': 1,
+                          'up': 2, 'forward': 3}
+    training_path15 = "P8-data"
+
+    num_actions_dict16 = {0: 'left', 1: 'right',
+                          2: 'up', 3: 'forward', 4: 'other'}
+    actions_num_dict16 = {'left': 0, 'right': 1,
+                          'up': 2, 'forward': 3, 'other': 4}
+    training_path16 = "P8-data-O"
+
+    num_actions_dict17 = {0: 'left', 1: 'right',
+                          2: 'up', 3: 'back'}
+    actions_num_dict17 = {'left': 0, 'right': 1,
+                          'up': 2, 'back': 3}
+    training_path17 = "P9-data"
+
+    num_actions_dict18 = {0: 'left', 1: 'right',
+                          2: 'up', 3: 'back', 4: 'other'}
+    actions_num_dict18 = {'left': 0, 'right': 1,
+                          'up': 2, 'back': 3, 'other': 4}
+    training_path18 = "P9-data-O"
+
     num_actions_dicts = [num_actions_dict1, num_actions_dict2, num_actions_dict3, num_actions_dict4,
-                         num_actions_dict5, num_actions_dict6]
+                         num_actions_dict5, num_actions_dict6, num_actions_dict7, num_actions_dict8,
+                         num_actions_dict9, num_actions_dict10, num_actions_dict11, num_actions_dict12,
+                         num_actions_dict13, num_actions_dict14, num_actions_dict15, num_actions_dict16,
+                         num_actions_dict17, num_actions_dict18]
     actions_num_dicts = [actions_num_dict1, actions_num_dict2, actions_num_dict3, actions_num_dict4,
-                         actions_num_dict5, actions_num_dict6]
+                         actions_num_dict5, actions_num_dict6, actions_num_dict7, actions_num_dict8,
+                         actions_num_dict9, actions_num_dict10, actions_num_dict11, actions_num_dict12,
+                         actions_num_dict13, actions_num_dict14, actions_num_dict15, actions_num_dict16,
+                         actions_num_dict17, actions_num_dict18]
     training_paths = [training_path1, training_path2, training_path3, training_path4, training_path5,
-                      training_path6]
+                      training_path6, training_path7, training_path8, training_path9, training_path10,
+                      training_path11, training_path12, training_path13, training_path14, training_path15,
+                      training_path16, training_path17, training_path18]
 
     model_type = 'k-nn'
     # model_type = 'random-forest'

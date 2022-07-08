@@ -40,6 +40,8 @@ class DataRetriever:
                 df.reset_index(drop=True, inplace=True)
                 gyro_data = df
 
+        if acc_data is None or gyro_data is None:
+            print("none: " + file_name)
         if abs(len(acc_data.index) - len(gyro_data.index)) > 10:
             print(file_name)
 

@@ -8,6 +8,6 @@ class TrainingSample(Sample):
         self.sample_num = sample_num
 
     def __str__(self):
-        s = self.action_name + "\n"
+        s = self.action_name + " " + self.sample_num + "\n"
         s += super().print_data()
         return s
