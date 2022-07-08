@@ -21,7 +21,7 @@ class Classifier:
     invalid_windows = list()
     valid_windows = list()
 
-    def __init__(self, training_data, test_data, num_actions_dict, actions_num_dict):
+    def __init__(self, training_data, test_data, num_actions_dict, actions_num_dict, mobile_average_window_dim):
         self.y_list = None
         self.x_list = None
         self.feature_names = list()
@@ -30,6 +30,7 @@ class Classifier:
         self.num_actions_dict = num_actions_dict
         self.actions_num_dict = actions_num_dict
         self.n_classes = len(self.num_actions_dict.keys())
+        self.mobile_average_window_dim = mobile_average_window_dim
 
     def classify(self, model_type, test_size):
         print("\nPreparing data for training:")
@@ -156,6 +157,9 @@ class Classifier:
         gyro_x, gyro_y, gyro_z = sample.get_gyro_axes()
         axes = [acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z]
         axes_names = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
+
+        # print("Computing mobile averages...")
+        axes = [f.moving_average_conv(a, self.mobile_average_window_dim) for a in axes]
 
         # FEATURES
         # mean

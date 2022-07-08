@@ -7,6 +7,24 @@ from scipy.signal import correlate
 from scipy.signal import welch
 
 
+# O(x*w) moving average without cumulative error
+def moving_average_conv(x, w):
+    if w > 0:
+        return np.convolve(x, np.ones(w), 'valid') / w
+    else:
+        return x
+
+
+# efficient moving average with cumulative error
+def moving_average_cumsum(x, w):
+    if w > 0:
+        ret = np.cumsum(x, dtype=float)
+        ret[w:] = ret[w:] - ret[:-w]
+        return ret[w - 1:] / w
+    else:
+        return x
+
+
 def min_max_diff(ls):
     if ls.size == 0:
         return 0

@@ -58,8 +58,9 @@ class DataRetriever:
             acc_data, gyro_data = DataRetriever.retrieve_data(k, v)
             # remove digits from the folder name obtaining the ACTION name
             action_name = k.split("-")[1]
+            sample_num = k.split("-")[2]
             # store the SAMPLE data (encapsulated in a Sample object) in a dictionary associating it to its ACTION name
-            samples[action_name].append(TrainingSample(action_name, acc_data, gyro_data))
+            samples[action_name].append(TrainingSample(action_name, acc_data, gyro_data, sample_num))
             os.chdir("..")
 
         # now the dictionary samples contains the lists of SAMPLES, with each list associated to its ACTION name

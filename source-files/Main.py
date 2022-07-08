@@ -11,7 +11,6 @@ import seaborn as sns
 
 
 class Main:
-
     test_path = "test-data"
 
     # left = L
@@ -75,15 +74,19 @@ class Main:
     actions = 1
     save = True
     tries = 10
+    mobile_average_window_dim = 4
+    max_test_size = 24
 
     if __name__ == "__main__":
 
         print(sys.argv[1:])
         if len(sys.argv) > 1:
-            _, model_type, window_dim, actions, tries, save = sys.argv
+            _, model_type, window_dim, actions, tries, mobile_average_window_dim, max_test_size, save = sys.argv
             window_dim = int(window_dim)
             actions = int(actions)
             tries = int(tries)
+            mobile_average_window_dim = int(mobile_average_window_dim)
+            max_test_size = int(max_test_size)
 
         if save == 't':
             save = True
@@ -100,7 +103,7 @@ class Main:
         # test_data = DataRetriever.retrieve_test_data(test_path)
         print("\n\n--- %s retrieve data seconds ---\n\n" % (time.time() - start_time))
 
-        classifier = Classifier(training_data, None, num_actions_dict, actions_num_dict)
+        classifier = Classifier(training_data, None, num_actions_dict, actions_num_dict, mobile_average_window_dim)
         # classifier = Classifier(training_data, test_data, num_actions_dict, actions_num_dict)
 
         start_time = time.time()
@@ -115,25 +118,27 @@ class Main:
         params = dict()
         for t in range(tries):
             i = 0
-            for test_size in range(1, 10):
-                params[i] = "(tries: " + str(tries) + ", model-type: " + model_type + ", train-size: "\
-                            + str(10 - test_size) + ")"
+            for test_size in range(1, max_test_size + 1):
+                params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
+                            ", mavg: " + str(mobile_average_window_dim) + \
+                            ", train size: " + str(max_test_size + 1 - test_size) + "/" + str(max_test_size + 1) + ")"
                 if i in scores.keys():
                     start_time = time.time()
-                    new_score, new_cf = classifier.classify(model_type, test_size/10)
+                    new_score, new_cf = classifier.classify(model_type, test_size / (max_test_size + 1))
                     print("\n\n--- %s classify seconds ---\n\n" % (time.time() - start_time))
                     scores[i] += new_score
                     confusion_matrices[i] += numpy.array(new_cf)
                 else:
-                    scores[i], confusion_matrices[i] = classifier.classify(model_type, test_size/10)
+                    scores[i], confusion_matrices[i] = classifier.classify(model_type, test_size / (max_test_size + 1))
                 i += 1
         for i in range(0, len(scores)):
-            scores[i] = scores[i]/tries
-            confusion_matrices[i] = confusion_matrices[i]/tries
+            scores[i] = scores[i] / tries
+            confusion_matrices[i] = confusion_matrices[i] / tries
         best = max(scores.values())
         best_string = "Best for "
         print("\n\nScores...")
-        images_folder = training_path_name + "-tries_" + str(tries) + "-model_" + model_type
+        images_folder = training_path_name + "-tries_" + str(tries) + "-model_" + model_type + \
+                        "-mavg_" + str(mobile_average_window_dim)
         for i in range(0, len(scores)):
             print("Score for " + params[i] + ": " + str(scores[i]))
 
@@ -157,7 +162,7 @@ class Main:
         print(best_string + ": " + str(best))
 
         # plot scores
-        training_sizes = [x for x in range(9, 0, -1)]
+        training_sizes = [x for x in range(1, max_test_size + 1)]
         fig, ax = plt.subplots()
         plt.plot(training_sizes, list(scores.values())[::-1], color='b', marker='o', linestyle='-',
                  linewidth=2, markersize=5)
