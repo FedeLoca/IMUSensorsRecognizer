@@ -3,11 +3,13 @@ import math
 import numpy as np
 import pandas as pd
 import scipy.stats as sps
+from scipy.spatial import distance
 # from keras import Sequential
 # from keras.layers import LSTM, Dropout, Dense
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as skm
 from boruta import BorutaPy
 import Features as f
@@ -31,6 +33,23 @@ class Classifier:
         self.actions_num_dict = actions_num_dict
         self.n_classes = len(self.num_actions_dict.keys())
         self.mobile_average_window_dim = mobile_average_window_dim
+
+    @staticmethod
+    def dtw(a, b):
+        an = a.size
+        bn = b.size
+        pointwise_distance = distance.cdist(a.reshape(-1, 1), b.reshape(-1, 1))
+        cumdist = np.matrix(np.ones((an+1, bn+1)) * np.inf)
+        cumdist[0, 0] = 0
+
+        for ai in range(an):
+            for bi in range(bn):
+                minimum_cost = np.min([cumdist[ai, bi+1],
+                                       cumdist[ai+1, bi],
+                                       cumdist[ai, bi]])
+                cumdist[ai+1, bi+1] = pointwise_distance[ai, bi] + minimum_cost
+
+        return cumdist[an, bn]
 
     def classify(self, model_type, test_size):
         print("\nPreparing data for training:")
@@ -77,6 +96,14 @@ class Classifier:
                                            max_leaf_nodes=None, min_impurity_decrease=0.0, bootstrap=True,
                                            oob_score=False, n_jobs=-1, random_state=None, warm_start=False,
                                            class_weight=None, ccp_alpha=0.0, max_samples=None)
+        elif model_type == 'k-nn-dtw':
+            # n_neighbors must be equal or lower than the number of train samples
+
+            # parameters = {'n_neighbors':[2, 4, 8]}
+            # model = GridSearchCV(KNeighborsClassifier(metric=Classifier.dtw), parameters, cv=5)
+
+            model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
+                                         metric=Classifier.dtw, metric_params=None)
 
         print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
 

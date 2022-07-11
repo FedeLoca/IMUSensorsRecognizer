@@ -150,6 +150,7 @@ class Main:
 
     model_type = 'k-nn'
     # model_type = 'random-forest'
+    # model_type = 'k-nn-dtw'
     window_dim = 0  # in milliseconds
     actions = 1
     save = True
