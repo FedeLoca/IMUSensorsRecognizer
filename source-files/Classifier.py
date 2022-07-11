@@ -8,6 +8,7 @@ from scipy.spatial import distance
 # from keras.layers import LSTM, Dropout, Dense
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as skm
@@ -104,6 +105,12 @@ class Classifier:
 
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
                                          metric=Classifier.dtw, metric_params=None)
+        elif model_type == 'svm':
+            model = SVC(C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True, probability=False,
+                        tol=0.001, cache_size=200, class_weight=None, verbose=False, max_iter=- 1,
+                        decision_function_shape='ovr', break_ties=False, random_state=None)
+        elif model_type == 'lstm':
+            pass
 
         print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
 
