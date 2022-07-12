@@ -2,7 +2,9 @@ import math
 
 import numpy as np
 import pandas as pd
+import time
 import scipy.stats as sps
+import fastdtw
 from scipy.spatial import distance
 # from keras import Sequential
 # from keras.layers import LSTM, Dropout, Dense
@@ -52,6 +54,10 @@ class Classifier:
 
         return cumdist[an, bn]
 
+    @staticmethod
+    def fast_dtw(a, b):
+        return fastdtw.fastdtw(a, b)[0]
+
     def classify(self, model_type, test_size):
         print("\nPreparing data for training:")
         x_train, y_train, x_test, y_test = list(), list(), list(), list()
@@ -100,13 +106,22 @@ class Classifier:
         elif model_type == 'k-nn-dtw':
             # n_neighbors must be equal or lower than the number of train samples
 
-            # parameters = {'n_neighbors':[2, 4, 8]}
+            # parameters = {'n_neighbors': [2, 4, 8]}
             # model = GridSearchCV(KNeighborsClassifier(metric=Classifier.dtw), parameters, cv=5)
 
+            # model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
+            #                              metric=Classifier.dtw, metric_params=None)
+
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
-                                         metric=Classifier.dtw, metric_params=None)
+                                         metric=Classifier.fast_dtw, metric_params=None)
+
         elif model_type == 'svm':
-            model = SVC(C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True, probability=False,
+            # parameters = {'C': [1.0, 2.0, 5.0, 10.0]}
+            # model = GridSearchCV(SVC(C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True,
+            #                          probability=False, tol=0.001, cache_size=200, class_weight=None, verbose=False,
+            #                          max_iter=- 1, decision_function_shape='ovr', break_ties=False, random_state=None),
+            #                      parameters, cv=5, verbose=3)
+            model = SVC(C=20.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True, probability=False,
                         tol=0.001, cache_size=200, class_weight=None, verbose=False, max_iter=- 1,
                         decision_function_shape='ovr', break_ties=False, random_state=None)
         elif model_type == 'lstm':
@@ -115,10 +130,16 @@ class Classifier:
         print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
 
         print("\nTraining...")
+        start_time = time.time()
         model.fit(x_train, y_train)
+        train_seconds = time.time() - start_time
+        print("\n\n--- %s train seconds ---\n\n" % train_seconds)
 
         print("\nTest...")
+        start_time = time.time()
         prediction = model.predict(x_test)
+        predict_seconds = time.time() - start_time
+        print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
         confusion_matrix = skm.confusion_matrix(y_test, prediction)
         for i in range(0, len(y_test)):
             print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
@@ -139,7 +160,7 @@ class Classifier:
         print("\nNew number of features: " + str(len(x_train_filtered)))
         '''
 
-        return score, confusion_matrix
+        return score, confusion_matrix, train_seconds, predict_seconds
 
     # returns a list containing, for every action, of an x matrix in which each row contains all the features for a
     # sample and an array y of the row labels

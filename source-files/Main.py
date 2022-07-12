@@ -197,6 +197,8 @@ class Main:
 
         scores = dict()
         confusion_matrices = dict()
+        train_times = dict()
+        predict_times = dict()
         params = dict()
         for t in range(tries):
             i = 0
@@ -205,17 +207,22 @@ class Main:
                             ", mavg: " + str(mobile_average_window_dim) + \
                             ", train size: " + str(max_test_size + 1 - test_size) + "/" + str(max_test_size + 1) + ")"
                 if i in scores.keys():
-                    start_time = time.time()
-                    new_score, new_cf = classifier.classify(model_type, test_size / (max_test_size + 1))
-                    print("\n\n--- %s classify seconds ---\n\n" % (time.time() - start_time))
+
+                    new_score, new_cf, new_train_t, new_predict_t = \
+                        classifier.classify(model_type, test_size / (max_test_size + 1))
+                    train_times[i] += new_train_t
+                    predict_times[i] += new_predict_t
                     scores[i] += new_score
                     confusion_matrices[i] += numpy.array(new_cf)
                 else:
-                    scores[i], confusion_matrices[i] = classifier.classify(model_type, test_size / (max_test_size + 1))
+                    scores[i], confusion_matrices[i], train_times[i], predict_times[i] = \
+                        classifier.classify(model_type, test_size / (max_test_size + 1))
                 i += 1
         for i in range(0, len(scores)):
             scores[i] = scores[i] / tries
             confusion_matrices[i] = confusion_matrices[i] / tries
+            train_times[i] = train_times[i] / tries
+            predict_times[i] = predict_times[i] / tries
         best = max(scores.values())
         best_string = "Best for "
         print("\n\nScores...")
@@ -262,3 +269,19 @@ class Main:
                 os.makedirs(".." + os.sep + "Images" + os.sep + images_folder)
             plt.savefig(".." + os.sep + "Images" + os.sep + images_folder + os.sep + "scores.png")
         plt.show()
+
+        sum = 0
+        c = 0
+        for n in train_times.values():
+            sum = sum + n
+            c = c + 1
+        avg = sum / c
+        print("Average train time: " + str(avg))
+
+        sum = 0
+        c = 0
+        for n in predict_times.values():
+            sum = sum + n
+            c = c + 1
+        avg = sum / c
+        print("Average predict time: " + str(avg))
