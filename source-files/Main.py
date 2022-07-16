@@ -149,12 +149,18 @@ class Main:
                       training_path16, training_path17, training_path18]
 
     model_type = 'k-nn'
-    # model_type = 'random-forest'
+    # model_type = 'rf'
     # model_type = 'k-nn-dtw'
     # model_type = 'svm'
+    # model_type = 'lstm'
+    # model_type = 'nb'
+    # model_type = 'hmm'
+    # model_type = 'lr'
+    # model_type = 'dt'
     window_dim = 0  # in milliseconds
-    actions = 1
-    save = True
+    actions = 0
+    save = False
+    tuning = False
     tries = 10
     mobile_average_window_dim = 4
     max_test_size = 24
@@ -163,8 +169,8 @@ class Main:
 
         print(sys.argv[1:])
         if len(sys.argv) > 1:
-            _, model_type, window_dim, actions, tries, mobile_average_window_dim, max_test_size, save = sys.argv
-            window_dim = int(window_dim)
+            _, model_type, window_dim, actions, tries, mobile_average_window_dim, max_test_size, save, tuning = sys.argv
+            window_dim = int(window_dim) * 1000000
             actions = int(actions)
             tries = int(tries)
             mobile_average_window_dim = int(mobile_average_window_dim)
@@ -172,6 +178,12 @@ class Main:
 
         if save == 't':
             save = True
+        else:
+            save = False
+        if tuning == 't':
+            tuning = True
+        else:
+            tuning = False
 
         num_actions_dict = num_actions_dicts[actions]
         actions_num_dict = actions_num_dicts[actions]
@@ -185,14 +197,17 @@ class Main:
         # test_data = DataRetriever.retrieve_test_data(test_path)
         print("\n\n--- %s retrieve data seconds ---\n\n" % (time.time() - start_time))
 
-        classifier = Classifier(training_data, None, num_actions_dict, actions_num_dict, mobile_average_window_dim)
+        classifier = Classifier(training_data, None, num_actions_dict, actions_num_dict, mobile_average_window_dim, tuning)
         # classifier = Classifier(training_data, test_data, num_actions_dict, actions_num_dict)
 
         start_time = time.time()
-        if window_dim > 0:
-            classifier.compute_features_on_windows(window_dim)
+        if model_type == 'lstm':
+            classifier.compute_lstm_data(window_dim)
         else:
-            classifier.compute_features()
+            if window_dim > 0:
+                classifier.compute_features_on_windows(window_dim)
+            else:
+                classifier.compute_features()
         print("\n\n--- %s compute features seconds ---\n\n" % (time.time() - start_time))
 
         scores = dict()

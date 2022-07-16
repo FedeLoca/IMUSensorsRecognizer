@@ -1,4 +1,5 @@
 import math
+import string
 
 import numpy as np
 import pandas as pd
@@ -6,15 +7,21 @@ import time
 import scipy.stats as sps
 import fastdtw
 from scipy.spatial import distance
-# from keras import Sequential
-# from keras.layers import LSTM, Dropout, Dense
+from keras import Sequential
+from keras.layers import LSTM, Dropout, Dense
+from sklearn import metrics
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
+from hmmlearn import hmm
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as skm
 from boruta import BorutaPy
+from sklearn.tree import DecisionTreeClassifier
+
 import Features as f
 from TrainingSample import TrainingSample
 
@@ -26,7 +33,7 @@ class Classifier:
     invalid_windows = list()
     valid_windows = list()
 
-    def __init__(self, training_data, test_data, num_actions_dict, actions_num_dict, mobile_average_window_dim):
+    def __init__(self, training_data, test_data, num_actions_dict, actions_num_dict, mobile_average_window_dim, tuning):
         self.y_list = None
         self.x_list = None
         self.feature_names = list()
@@ -36,27 +43,7 @@ class Classifier:
         self.actions_num_dict = actions_num_dict
         self.n_classes = len(self.num_actions_dict.keys())
         self.mobile_average_window_dim = mobile_average_window_dim
-
-    @staticmethod
-    def dtw(a, b):
-        an = a.size
-        bn = b.size
-        pointwise_distance = distance.cdist(a.reshape(-1, 1), b.reshape(-1, 1))
-        cumdist = np.matrix(np.ones((an+1, bn+1)) * np.inf)
-        cumdist[0, 0] = 0
-
-        for ai in range(an):
-            for bi in range(bn):
-                minimum_cost = np.min([cumdist[ai, bi+1],
-                                       cumdist[ai+1, bi],
-                                       cumdist[ai, bi]])
-                cumdist[ai+1, bi+1] = pointwise_distance[ai, bi] + minimum_cost
-
-        return cumdist[an, bn]
-
-    @staticmethod
-    def fast_dtw(a, b):
-        return fastdtw.fastdtw(a, b)[0]
+        self.tuning = tuning
 
     def classify(self, model_type, test_size):
         print("\nPreparing data for training:")
@@ -70,14 +57,24 @@ class Classifier:
             y_train.extend(y_train_el)
             x_test.extend(x_test_el)
             y_test.extend(y_test_el)
-        x_train = np.array(x_train)
-        # x_train_lengths = x_train[:, len(self.feature_names):]
-        x_train = np.delete(x_train, np.s_[len(self.feature_names):], 1)  # remove data lengths as they are not features
-        y_train = np.array(y_train)
-        x_test = np.array(x_test)
-        x_test_lengths = x_test[:, len(self.feature_names):]
-        x_test = np.delete(x_test, np.s_[len(self.feature_names):], 1)
-        y_test = np.array(y_test)
+
+        x_test_lengths = 0
+        if model_type != 'lstm':
+            x_train = np.array(x_train)
+            # x_train_lengths = x_train[:, len(self.feature_names):]
+            # remove data lengths as they are not features
+            x_train = np.delete(x_train, np.s_[len(self.feature_names):], 1)
+            y_train = np.array(y_train)
+            x_test = np.array(x_test)
+            x_test_lengths = x_test[:, len(self.feature_names):]
+            x_test = np.delete(x_test, np.s_[len(self.feature_names):], 1)
+            y_test = np.array(y_test)
+        else:
+            x_train = np.array(x_train, dtype=object)
+            y_train = np.array(y_train)
+            x_test = np.array(x_test, dtype=object)
+            y_test = np.array(y_test)
+
         print("### Features number: " + str(len(x_test[0])))
         print("### Total samples: " + str(len(y_train) + len(y_test)))
         print("### Train samples: " + str(len(y_train)))
@@ -93,11 +90,13 @@ class Classifier:
             print("### Invalid windows percentage: " + str(invalid_windows_perc) + "%")
 
         model = None
+        parameters = dict()
         if model_type == 'k-nn':
             # n_neighbors must be equal or lower than the number of train samples
+            parameters = {'n_neighbors': [1, 2, 4, 8]}
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
                                          metric='minkowski', metric_params=None)
-        elif model_type == 'random-forest':
+        elif model_type == 'rf':
             model = RandomForestClassifier(n_estimators=100, criterion='gini', max_depth=None, min_samples_split=2,
                                            min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features='sqrt',
                                            max_leaf_nodes=None, min_impurity_decrease=0.0, bootstrap=True,
@@ -105,48 +104,95 @@ class Classifier:
                                            class_weight=None, ccp_alpha=0.0, max_samples=None)
         elif model_type == 'k-nn-dtw':
             # n_neighbors must be equal or lower than the number of train samples
-
-            # parameters = {'n_neighbors': [2, 4, 8]}
-            # model = GridSearchCV(KNeighborsClassifier(metric=Classifier.dtw), parameters, cv=5)
-
-            # model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
-            #                              metric=Classifier.dtw, metric_params=None)
-
+            parameters = {'n_neighbors': [1, 2, 4, 8]}
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
                                          metric=Classifier.fast_dtw, metric_params=None)
-
         elif model_type == 'svm':
-            # parameters = {'C': [1.0, 2.0, 5.0, 10.0]}
-            # model = GridSearchCV(SVC(C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True,
-            #                          probability=False, tol=0.001, cache_size=200, class_weight=None, verbose=False,
-            #                          max_iter=- 1, decision_function_shape='ovr', break_ties=False, random_state=None),
-            #                      parameters, cv=5, verbose=3)
+            parameters = {'C': [10, 20, 40, 80]}
             model = SVC(C=20.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True, probability=False,
                         tol=0.001, cache_size=200, class_weight=None, verbose=False, max_iter=- 1,
                         decision_function_shape='ovr', break_ties=False, random_state=None)
-        elif model_type == 'lstm':
-            pass
+        elif model_type == 'nb':
+            model = GaussianNB(priors=None, var_smoothing=1e-09)
+        elif model_type == 'lr':
+            parameters = {'C': [0.5, 1, 5]}
+            model = LogisticRegression(penalty='l2', dual=False, tol=0.0001, C=1.0, fit_intercept=True,
+                                       intercept_scaling=1, class_weight=None, random_state=None, solver='lbfgs',
+                                       max_iter=10000, multi_class='auto', verbose=0, warm_start=False, n_jobs=None,
+                                       l1_ratio=None)
+        elif model_type == 'dt':
+            parameters = {'min_samples_split': [10, 20, 30], 'min_samples_leaf': [1, 2, 5, 10]}
+            model = DecisionTreeClassifier(criterion='gini', splitter='best', max_depth=None, min_samples_split=2,
+                                           min_samples_leaf=1, min_weight_fraction_leaf=0.0,
+                                           max_features=None, random_state=None, max_leaf_nodes=None,
+                                           min_impurity_decrease=0.0, class_weight=None, ccp_alpha=0.0)
+        elif model_type == 'hmm':
+            parameters = {'n_components': [1, 2, 5, 10]}
+            # model = hmm.BaseHMM(n_components=1, startprob_prior=1.0, transmat_prior=1.0, algorithm="viterbi",
+            #                     random_state=None, n_iter=10, tol=1e-2, verbose=False, params=string.ascii_letters,
+            #                     init_params=string.ascii_letters, implementation="log")
+            model = hmm.GaussianHMM(n_components=1, covariance_type='diag', min_covar=1e-3, startprob_prior=1.0,
+                                    transmat_prior=1.0, means_prior=0, means_weight=0, covars_prior=1e-2,
+                                    covars_weight=1, algorithm="viterbi", random_state=None, n_iter=10, tol=1e-2,
+                                    verbose=False, params="stmc", init_params="stmc", implementation="log")
 
-        print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
+        if model_type == 'lstm':
+            epochs, batch_size = 15, 64
+            model = Classifier.lstm(x_train, y_train)
+            print("\nTraining...")
+            start_time = time.time()
+            model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
+            train_seconds = time.time() - start_time
+            print("\n\n--- %s train seconds ---\n\n" % train_seconds)
 
-        print("\nTraining...")
-        start_time = time.time()
-        model.fit(x_train, y_train)
-        train_seconds = time.time() - start_time
-        print("\n\n--- %s train seconds ---\n\n" % train_seconds)
+            print("\nTest...")
+            start_time = time.time()
+            prediction = model.predict(x_test, y_test, batch_size=batch_size)
+            predict_seconds = time.time() - start_time
+            print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
+            y_pred = (prediction > 0.5)
+            confusion_matrix = metrics.confusion_matrix(y_test.argmax(axis=1), y_pred.argmax(axis=1))
+            for i in range(0, len(y_test)):
+                print('Result: Real: {},  Predicted: {}'.format(y_test[i], prediction[i]))
+            score = model.score(x_test, y_test)
+            print("Score: " + str(score))
+        else:
+            print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
 
-        print("\nTest...")
-        start_time = time.time()
-        prediction = model.predict(x_test)
-        predict_seconds = time.time() - start_time
-        print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
-        confusion_matrix = skm.confusion_matrix(y_test, prediction)
-        for i in range(0, len(y_test)):
-            print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
-            #  print("Test samples: " + str(y_test))
-            #  print("Prediction: " + str(prediction))
-        score = model.score(x_test, y_test)
-        print("Score: " + str(score))
+            if self.tuning:
+                model = GridSearchCV(model, parameters, cv=5)
+
+            print("\nTraining...")
+            start_time = time.time()
+            model.fit(x_train, y_train)
+            train_seconds = time.time() - start_time
+            print("\n\n--- %s train seconds ---\n\n" % train_seconds)
+
+            if self.tuning:
+                print("Best parameters set found on development set:")
+                print()
+                print(model.best_params_)
+                print()
+                print("Grid scores on development set:")
+                print()
+                means = model.cv_results_["mean_test_score"]
+                stds = model.cv_results_["std_test_score"]
+                for mean, std, params in zip(means, stds, model.cv_results_["params"]):
+                    print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+                print()
+
+            print("\nTest...")
+            start_time = time.time()
+            prediction = model.predict(x_test)
+            predict_seconds = time.time() - start_time
+            print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
+            confusion_matrix = skm.confusion_matrix(y_test, prediction)
+            for i in range(0, len(y_test)):
+                print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
+                #  print("Test samples: " + str(y_test))
+                #  print("Prediction: " + str(prediction))
+            score = model.score(x_test, y_test)
+            print("Score: " + str(score))
 
         '''
         print("\nFeature ranking...")
@@ -162,7 +208,7 @@ class Classifier:
 
         return score, confusion_matrix, train_seconds, predict_seconds
 
-    # returns a list containing, for every action, of an x matrix in which each row contains all the features for a
+    # returns a list containing, for every action, an x matrix in which each row contains all the features for a
     # sample and an array y of the row labels
     def compute_features(self):
         print("Computing features...")
@@ -182,7 +228,7 @@ class Classifier:
         self.x_list = x_list
         self.y_list = y_list
 
-    # returns a list containing, for every action, of an x matrix in which each row contains all the features for a
+    # returns a list containing, for every action, an x matrix in which each row contains all the features for a
     # window and an array y of the row labels
     def compute_features_on_windows(self, window_dim):
         print("Computing features...")
@@ -326,40 +372,45 @@ class Classifier:
         gyro_data = sample.acc_data
 
         # start splitting when all sensors started collecting data and finish when any sensor stopped collecting data
-        print(acc_data.columns.tolist())
+        # print(acc_data.columns.tolist())
         first_epoch = max(acc_data['epoch'].iloc[0], gyro_data['epoch'].iloc[0])
         last_epoch = min(acc_data['epoch'].iloc[-1], gyro_data['epoch'].iloc[-1])
 
         start_epoch = first_epoch
         end_epoch = start_epoch + window_dim
 
-        last_acc_split = start_epoch
+        last_acc_split = 0
         acc_epochs = acc_data['epoch']
         for i in range(0, len(acc_epochs)):
             if acc_epochs.iloc[i] >= start_epoch:
                 last_acc_split = i
                 break
 
-        last_gyro_split = start_epoch
+        last_gyro_split = 0
         gyro_epochs = gyro_data['epoch']
         for i in range(0, len(gyro_epochs)):
             if gyro_epochs.iloc[i] >= start_epoch:
                 last_gyro_split = i
                 break
 
-        # print("first-last " + str(last_epoch-first_epoch))
-        # print("first tot " + str(first_epoch))
-        # print("last tot " + str(last_epoch))
+        print("first-last " + str(last_epoch-first_epoch))
+        print("first " + str(first_epoch))
+        print("last " + str(last_epoch))
         while start_epoch < last_epoch:
             valid = True
 
-            new_acc_data, valid = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
-                                                            start_epoch, end_epoch, valid)
+            print("start " + str(start_epoch))
+            print("end " + str(end_epoch))
 
-            new_gyro_data, valid = Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data,
-                                                             start_epoch, end_epoch, valid)
+            print("Acc window extraction...")
+            new_acc_data, valid, last_acc_split = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
+                                                                            start_epoch, end_epoch, valid)
 
-            window = TrainingSample(sample.action_name, new_acc_data, new_gyro_data)
+            print("Gyro window extraction...")
+            new_gyro_data, valid, last_gyro_split = Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data,
+                                                                              start_epoch, end_epoch, valid)
+
+            window = TrainingSample(sample.action_name, new_acc_data, new_gyro_data, sample.sample_num)
             if valid:
                 self.valid_windows.append(window)
                 windows.append(window)
@@ -371,29 +422,78 @@ class Classifier:
         return windows
 
     @staticmethod
-    def extract_window(last_acc_split, acc_epochs, acc_data, start_epoch, end_epoch, valid):
+    def extract_window(last_split, epochs, data, start_epoch, end_epoch, valid):
         window_data = list()
-        for i in range(last_acc_split, len(acc_epochs)):
+        count = -1
+        for i in range(last_split, len(epochs)):
+            count = count + 1
             row = list()
-            # print(str(start_epoch) + "<=" + str(epochs.iloc[i]) + "<" + str(end_epoch))
-            if start_epoch <= acc_epochs.iloc[i] < end_epoch:
-                for col in acc_data.columns:
-                    row.append(acc_data[col].iloc[i])
+            # sprint(str(start_epoch) + "<=" + str(epochs.iloc[i]) + "<" + str(end_epoch))
+            if start_epoch <= epochs.iloc[i] < end_epoch:
+                for col in data.columns:
+                    row.append(data[col].iloc[i])
                 window_data.append(row)
-                # print(str(len(window_data)))
             else:
                 break
+        print(str(len(window_data)))
         if len(window_data) > 0:
-            window_df = pd.DataFrame(window_data, columns=acc_data.columns)
+            window_df = pd.DataFrame(window_data, columns=data.columns)
         else:
             valid = False
-            window_df = pd.DataFrame(columns=acc_data.columns)
+            window_df = pd.DataFrame(columns=data.columns)
 
-        return window_df, valid
+        return window_df, valid, last_split + count
 
-    '''
-    def lstm(self, x_train, y_train, x_test, y_test):
-        verbose, epochs, batch_size = 0, 15, 64
+    @staticmethod
+    def dtw(a, b):
+        an = a.size
+        bn = b.size
+        pointwise_distance = distance.cdist(a.reshape(-1, 1), b.reshape(-1, 1))
+        cumdist = np.matrix(np.ones((an+1, bn+1)) * np.inf)
+        cumdist[0, 0] = 0
+
+        for ai in range(an):
+            for bi in range(bn):
+                minimum_cost = np.min([cumdist[ai, bi+1],
+                                       cumdist[ai+1, bi],
+                                       cumdist[ai, bi]])
+                cumdist[ai+1, bi+1] = pointwise_distance[ai, bi] + minimum_cost
+
+        return cumdist[an, bn]
+
+    @staticmethod
+    def fast_dtw(a, b):
+        return fastdtw.fastdtw(a, b)[0]
+
+    # returns a list containing, for every action, an x matrix in which each row contains all the accelerometer and
+    # gyroscope axes (6) for all windows and an array y of the row labels
+    def compute_lstm_data(self, window_dim):
+        print("Computing features...")
+        x_list = list()
+        y_list = list()
+        row_number = 0
+        for action in self.training_data.keys():
+            x = list()
+            y = list()
+            for sample in self.training_data[action]:
+                windows = self.split_in_windows(sample, window_dim)
+                print("Windows number: " + str(len(windows)))
+                print("Window example: " + windows[0].__str__())
+                row = list()
+                for window in windows:
+                    acc_x, acc_y, acc_z = window.get_acc_axes()
+                    gyro_x, gyro_y, gyro_z = window.get_gyro_axes()
+                    row.append([acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z])
+                x.append(row)
+                y.append(self.actions_num_dict[action])
+                row_number += 1
+            x_list.append(x)
+            y_list.append(y)
+        self.x_list = x_list
+        self.y_list = y_list
+
+    @staticmethod
+    def lstm(x_train, y_train):
         n_timesteps, n_features, n_outputs = x_train.shape[1], x_train.shape[2], y_train.shape[1]
         model = Sequential()
         model.add(LSTM(100, input_shape=(n_timesteps, n_features)))
@@ -401,9 +501,5 @@ class Classifier:
         model.add(Dense(100, activation='relu'))
         model.add(Dense(n_outputs, activation='softmax'))
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        # fit network
-        model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=verbose)
-        # evaluate model
-        _, accuracy = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
-        return accuracy
-    '''
+        return model
+

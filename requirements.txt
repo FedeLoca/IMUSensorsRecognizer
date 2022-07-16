@@ -6,3 +6,5 @@ pandas>=1.4.2
 scikit-learn>=1.0.2
 Boruta>=0.3
 fastdtw>=0.3.4
+keras>=2.8.0
+hmmlearn>=0.2.7
