@@ -9,6 +9,11 @@ from TestSample import TestSample
 
 class DataRetriever:
 
+    columns_types = {'epoch': 'long', 'timestamp': 'str', 'x': 'float', 'y': 'float', 'z': 'float', 'label': 'str'}
+    header_labelled = ["epoch", "timestamp", "x", "y", "z", "label"]
+    header = ["epoch", "timestamp", "x", "y", "z"]
+    header_len = 5
+
     @staticmethod
     def get_folder_paths(outer_folder_name):
         os.chdir(outer_folder_name)
@@ -99,3 +104,42 @@ class DataRetriever:
             print(v)
 
         return samples
+
+    @staticmethod
+    def retrieve_train_session_data(folder):
+        print("\nRetrieving training samples:")
+        # go to data folder (each folder in it represents a SESSION) and create a dictionary associating
+        # every SESSION to its folder's path
+        paths_dict = DataRetriever.get_folder_paths(folder)
+
+        samples = collections.defaultdict(list)
+        for (k, v) in paths_dict.items():  # for each folder
+            os.chdir(v)
+            file_paths_list = [os.path.abspath(name) for name in os.listdir(v)]
+
+            gyro_data = None
+            acc_data = None
+            for i in range(0, file_paths_list.__len__()):  # for each file
+                # parse the path to retrieve the file name
+                file_name_ext = file_paths_list[i].split(os.sep)[-1]
+                file_name = file_name_ext[:-13]  # remove _labelled.csv
+                split_file_name = file_name.split("-")
+                print("Retrieving data from file " + file_name_ext)
+
+                if "ACC" in file_name:
+                    acc_data = pandas.read_csv(file_paths_list[i], skiprows=[0], names=DataRetriever.header_labelled)
+                else:
+                    gyro_data = pandas.read_csv(file_paths_list[i], skiprows=[0], names=DataRetriever.header_labelled)
+
+            samples["SESSION"].append(TrainingSample("SESSION", acc_data, gyro_data, k))
+
+        for ss in samples.values():
+            print("################## SESSION: \n")
+            for s in ss:
+                print(s)
+
+        os.chdir("..")
+        return samples
+
+
+

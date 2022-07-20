@@ -1,5 +1,8 @@
+import functools
 import math
 import string
+from collections import defaultdict
+from operator import add
 
 import numpy as np
 import pandas as pd
@@ -48,9 +51,9 @@ class Classifier:
     def classify(self, model_type, test_size):
         print("\nPreparing data for training:")
         x_train, y_train, x_test, y_test = list(), list(), list(), list()
-        for i in range(0, self.x_list.__len__()):
+        for (a, l) in self.x_list.items():
             # random_state=21
-            x_train_el, x_test_el, y_train_el, y_test_el = train_test_split(self.x_list[i], self.y_list[i],
+            x_train_el, x_test_el, y_train_el, y_test_el = train_test_split(l, self.y_list[a],
                                                                             test_size=test_size,
                                                                             shuffle=True)
             x_train.extend(x_train_el)
@@ -230,25 +233,21 @@ class Classifier:
 
     # returns a list containing, for every action, an x matrix in which each row contains all the features for a
     # window and an array y of the row labels
-    def compute_features_on_windows(self, window_dim):
+    def compute_features_on_windows(self, window_dim, overlap, from_session):
         print("Computing features...")
-        x_list = list()
-        y_list = list()
+        x_list = defaultdict(list)
+        y_list = defaultdict(list)
         row_number = 0
         for action in self.training_data.keys():
-            x = list()
-            y = list()
             for sample in self.training_data[action]:
-                windows = self.split_in_windows(sample, window_dim)
+                windows = self.split_in_windows(sample, window_dim, overlap, from_session)
                 # print("Windows number: " + str(len(windows)))
                 # print("Window example: " + windows[0].__str__())
                 for window in windows:
-                    y.append(self.actions_num_dict[action])
+                    y_list[window.action_name].append(self.actions_num_dict[window.action_name])
                     row = self.compute_row(window, row_number)
-                    x.append(row)
+                    x_list[window.action_name].append(row)
                     row_number += 1
-            x_list.append(x)
-            y_list.append(y)
         self.x_list = x_list
         self.y_list = y_list
 
@@ -366,7 +365,9 @@ class Classifier:
 
         return row
 
-    def split_in_windows(self, sample, window_dim):
+    def split_in_windows(self, sample, window_dim, overlap, from_session):
+        print("Start splitting sample " + str(sample.sample_num))
+
         windows = list()
         acc_data = sample.acc_data
         gyro_data = sample.acc_data
@@ -378,6 +379,7 @@ class Classifier:
 
         start_epoch = first_epoch
         end_epoch = start_epoch + window_dim
+        start_next_epoch = end_epoch - int(window_dim * overlap)
 
         last_acc_split = 0
         acc_epochs = acc_data['epoch']
@@ -396,45 +398,67 @@ class Classifier:
         print("first-last " + str(last_epoch-first_epoch))
         print("first " + str(first_epoch))
         print("last " + str(last_epoch))
+        current_action = "other"
         while start_epoch < last_epoch:
             valid = True
 
             print("start " + str(start_epoch))
+            print("start next " + str(start_next_epoch))
             print("end " + str(end_epoch))
 
-            print("Acc window extraction...")
-            new_acc_data, valid, last_acc_split = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
-                                                                            start_epoch, end_epoch, valid)
+            if from_session:
+                print("Acc window extraction...")
+                new_acc_data, valid, last_acc_split, action_name, current_action = \
+                    Classifier.extract_session_window(last_acc_split, acc_epochs, acc_data, start_epoch, end_epoch,
+                                                      start_next_epoch, valid, current_action, True)
+                print("Gyro window extraction...")
+                new_gyro_data, valid, last_gyro_split, _, _ = \
+                    Classifier.extract_session_window(last_gyro_split, gyro_epochs, gyro_data, start_epoch, end_epoch,
+                                                      start_next_epoch, valid, "", False)
 
-            print("Gyro window extraction...")
-            new_gyro_data, valid, last_gyro_split = Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data,
-                                                                              start_epoch, end_epoch, valid)
+                window = TrainingSample(action_name, new_acc_data, new_gyro_data, sample.sample_num)
+            else:
+                print("Acc window extraction...")
+                new_acc_data, valid, last_acc_split = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
+                                                                                start_epoch, end_epoch, start_next_epoch,
+                                                                                valid)
+                print("Gyro window extraction...")
+                new_gyro_data, valid, last_gyro_split = Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data,
+                                                                                  start_epoch, end_epoch, start_next_epoch,
+                                                                                  valid)
 
-            window = TrainingSample(sample.action_name, new_acc_data, new_gyro_data, sample.sample_num)
+                window = TrainingSample(sample.action_name, new_acc_data, new_gyro_data, sample.sample_num)
+
             if valid:
                 self.valid_windows.append(window)
                 windows.append(window)
             else:
                 self.invalid_windows.append(window)
-            start_epoch = end_epoch
+            start_epoch = start_next_epoch
             end_epoch = start_epoch + window_dim
+            start_next_epoch = end_epoch - int(window_dim * overlap)
 
         return windows
 
     @staticmethod
-    def extract_window(last_split, epochs, data, start_epoch, end_epoch, valid):
+    def extract_window(last_split, epochs, data, start_epoch, end_epoch, start_next_epoch, valid):
         window_data = list()
         count = -1
+        start_next_split = -1
         for i in range(last_split, len(epochs)):
             count = count + 1
             row = list()
-            # sprint(str(start_epoch) + "<=" + str(epochs.iloc[i]) + "<" + str(end_epoch))
-            if start_epoch <= epochs.iloc[i] < end_epoch:
+            epoch = epochs.iloc[i]
+            if start_next_split < 0 and epoch >= start_next_epoch:
+                start_next_split = i
+
+            if start_epoch <= epoch < end_epoch:
                 for col in data.columns:
                     row.append(data[col].iloc[i])
                 window_data.append(row)
             else:
                 break
+
         print(str(len(window_data)))
         if len(window_data) > 0:
             window_df = pd.DataFrame(window_data, columns=data.columns)
@@ -442,7 +466,71 @@ class Classifier:
             valid = False
             window_df = pd.DataFrame(columns=data.columns)
 
-        return window_df, valid, last_split + count
+        return window_df, valid, start_next_split
+
+    @staticmethod
+    def extract_session_window(last_split, epochs, data, start_epoch, end_epoch, start_next_epoch, valid,
+                               current_action, determine_action):
+        window_data = list()
+        labels = data["label"]
+        actions = defaultdict(list)
+        actions[current_action].append(start_epoch)
+        start_next_split = -1
+        next_current_action = current_action
+        for i in range(last_split, len(epochs)):
+            row = list()
+            label = labels.iloc[i]
+            epoch = epochs.iloc[i]
+
+            if start_next_split < 0 and epoch >= start_next_epoch:
+                next_current_action = current_action
+                start_next_split = i
+
+            if start_epoch <= epoch < end_epoch:
+                if determine_action and not pd.isnull(label) and label != "ciak":
+                    split_extra_column = label.split(" ")
+                    # print(actions)
+                    if split_extra_column[0] == "start":
+                        current_action = split_extra_column[2]
+                        actions["other"][-1] = epoch - actions["other"][-1]
+                        actions[current_action].append(epoch)
+                        # print("START " + split_extra_column[2])
+                    elif split_extra_column[0] == "end":
+                        # print("END " + split_extra_column[2])
+                        current_action = "other"
+                        actions[split_extra_column[2]][-1] = epoch - actions[split_extra_column[2]][-1]
+                        actions["other"].append(epoch)
+
+                for col in data.columns[:-1]:
+                    row.append(data[col].iloc[i])
+                window_data.append(row)
+            else:
+                actions[current_action][-1] = epoch - actions[current_action][-1]
+                break
+
+        action_name = None
+        if determine_action:
+            duration_max = -1
+            action_name = ""
+            for (k, v) in actions.items():
+                if len(v) == 0:
+                    duration = 0
+                else:
+                    duration = functools.reduce(add, v)
+
+                if duration > duration_max:
+                    if k != "other" or (k == "other" and action_name == ""):
+                        duration_max = duration
+                        action_name = k
+            print(action_name + ": " + str(len(window_data)))
+
+        if len(window_data) > 0:
+            window_df = pd.DataFrame(window_data, columns=data.columns[:-1])
+        else:
+            valid = False
+            window_df = pd.DataFrame(columns=data.columns[:-1])
+
+        return window_df, valid, start_next_split, action_name, next_current_action
 
     @staticmethod
     def dtw(a, b):

@@ -164,17 +164,19 @@ class Main:
     tries = 10
     mobile_average_window_dim = 4
     max_test_size = 24
+    overlap = 0
 
     if __name__ == "__main__":
 
         print(sys.argv[1:])
         if len(sys.argv) > 1:
-            _, model_type, window_dim, actions, tries, mobile_average_window_dim, max_test_size, save, tuning = sys.argv
+            _, model_type, window_dim, overlap, actions, tries, mobile_average_window_dim, max_test_size, save, tuning = sys.argv
             window_dim = int(window_dim) * 1000000
             actions = int(actions)
             tries = int(tries)
             mobile_average_window_dim = int(mobile_average_window_dim)
             max_test_size = int(max_test_size)
+            overlap = float(overlap)
 
         if save == 't':
             save = True
@@ -192,7 +194,8 @@ class Main:
         start_time = time.time()
         training_path_name = training_path
         training_path = ".." + os.sep + training_path
-        training_data = DataRetriever.retrieve_training_data(training_path)
+        # training_data = DataRetriever.retrieve_training_data(training_path)
+        training_data = DataRetriever.retrieve_train_session_data(training_path.replace("-O", "") + "-sessions")
         # test_path = ".." + os.sep + test_path
         # test_data = DataRetriever.retrieve_test_data(test_path)
         print("\n\n--- %s retrieve data seconds ---\n\n" % (time.time() - start_time))
@@ -205,7 +208,7 @@ class Main:
             classifier.compute_lstm_data(window_dim)
         else:
             if window_dim > 0:
-                classifier.compute_features_on_windows(window_dim)
+                classifier.compute_features_on_windows(window_dim, overlap, True)
             else:
                 classifier.compute_features()
         print("\n\n--- %s compute features seconds ---\n\n" % (time.time() - start_time))
@@ -217,39 +220,52 @@ class Main:
         params = dict()
         for t in range(tries):
             i = 0
-            for test_size in range(1, max_test_size + 1):
+            # for test_size in range(1, max_test_size + 1):
+            #     params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
+            #                 ", mavg: " + str(mobile_average_window_dim) + \
+            #                 ", train size: " + str(max_test_size + 1 - test_size) + "/" + str(max_test_size + 1) + ")"
+            #     if i in scores.keys():
+            #
+            #         new_score, new_cf, new_train_t, new_predict_t = \
+            #             classifier.classify(model_type, test_size / (max_test_size + 1))
+            #         train_times[i] += new_train_t
+            #         predict_times[i] += new_predict_t
+            #         scores[i] += new_score
+            #         confusion_matrices[i] += numpy.array(new_cf)
+            for test_size in [round(x, 2) for x in numpy.arange(0.05, 0.95, 0.05)]:
                 params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
                             ", mavg: " + str(mobile_average_window_dim) + \
-                            ", train size: " + str(max_test_size + 1 - test_size) + "/" + str(max_test_size + 1) + ")"
+                            ", train size: " + str(test_size) + ", wdim: " + str(window_dim/1000000) + \
+                            "s, overlap: " + str(overlap) + ")"
                 if i in scores.keys():
-
                     new_score, new_cf, new_train_t, new_predict_t = \
-                        classifier.classify(model_type, test_size / (max_test_size + 1))
+                        classifier.classify(model_type, test_size)
                     train_times[i] += new_train_t
                     predict_times[i] += new_predict_t
                     scores[i] += new_score
                     confusion_matrices[i] += numpy.array(new_cf)
                 else:
                     scores[i], confusion_matrices[i], train_times[i], predict_times[i] = \
-                        classifier.classify(model_type, test_size / (max_test_size + 1))
+                        classifier.classify(model_type, test_size)
                 i += 1
         for i in range(0, len(scores)):
             scores[i] = scores[i] / tries
-            confusion_matrices[i] = confusion_matrices[i] / tries
+            # confusion_matrices[i] = confusion_matrices[i] / tries
             train_times[i] = train_times[i] / tries
             predict_times[i] = predict_times[i] / tries
         best = max(scores.values())
         best_string = "Best for "
         print("\n\nScores...")
         images_folder = training_path_name + "-tries_" + str(tries) + "-model_" + model_type + \
-                        "-mavg_" + str(mobile_average_window_dim)
+                        "-mavg_" + str(mobile_average_window_dim) + "-wdim_" + str(window_dim/1000000) + \
+                        "s-overlap_" + str(overlap)
         for i in range(0, len(scores)):
             print("Score for " + params[i] + ": " + str(scores[i]))
 
             # plot confusion matrix
             print(confusion_matrices[i])
             ax = sns.heatmap(confusion_matrices[i], annot=True, cmap='Blues')
-            ax.set_title("Confusion Matrix for " + params[i])
+            ax.set_title("CM for " + params[i])
             ax.set_xlabel("Predicted Values")
             ax.set_ylabel("Actual Values")
             ax.xaxis.set_ticklabels(list(num_actions_dict.values()))
@@ -266,7 +282,8 @@ class Main:
         print(best_string + ": " + str(best))
 
         # plot scores
-        training_sizes = [x for x in range(1, max_test_size + 1)]
+        # training_sizes = [x for x in range(1, max_test_size + 1)]
+        training_sizes = [round(x, 2) for x in numpy.arange(0.05, 0.95, 0.05)]
         fig, ax = plt.subplots()
         plt.plot(training_sizes, list(scores.values())[::-1], color='b', marker='o', linestyle='-',
                  linewidth=2, markersize=5)
