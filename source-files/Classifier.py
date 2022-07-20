@@ -395,34 +395,34 @@ class Classifier:
                 last_gyro_split = i
                 break
 
-        print("first-last " + str(last_epoch-first_epoch))
-        print("first " + str(first_epoch))
-        print("last " + str(last_epoch))
+        # print("first-last " + str(last_epoch-first_epoch))
+        # print("first " + str(first_epoch))
+        # print("last " + str(last_epoch))
         current_action = "other"
         while start_epoch < last_epoch:
             valid = True
 
-            print("start " + str(start_epoch))
-            print("start next " + str(start_next_epoch))
-            print("end " + str(end_epoch))
+            # print("start " + str(start_epoch))
+            # print("start next " + str(start_next_epoch))
+            # print("end " + str(end_epoch))
 
             if from_session:
-                print("Acc window extraction...")
+                # print("Acc window extraction...")
                 new_acc_data, valid, last_acc_split, action_name, current_action = \
                     Classifier.extract_session_window(last_acc_split, acc_epochs, acc_data, start_epoch, end_epoch,
                                                       start_next_epoch, valid, current_action, True)
-                print("Gyro window extraction...")
+                # print("Gyro window extraction...")
                 new_gyro_data, valid, last_gyro_split, _, _ = \
                     Classifier.extract_session_window(last_gyro_split, gyro_epochs, gyro_data, start_epoch, end_epoch,
                                                       start_next_epoch, valid, "", False)
 
                 window = TrainingSample(action_name, new_acc_data, new_gyro_data, sample.sample_num)
             else:
-                print("Acc window extraction...")
+                # print("Acc window extraction...")
                 new_acc_data, valid, last_acc_split = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
                                                                                 start_epoch, end_epoch, start_next_epoch,
                                                                                 valid)
-                print("Gyro window extraction...")
+                # print("Gyro window extraction...")
                 new_gyro_data, valid, last_gyro_split = Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data,
                                                                                   start_epoch, end_epoch, start_next_epoch,
                                                                                   valid)
