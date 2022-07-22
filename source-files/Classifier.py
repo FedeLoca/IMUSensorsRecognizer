@@ -100,14 +100,13 @@ class Classifier:
                                          metric='minkowski', metric_params=None)
         elif model_type == 'rf':
             # Number of trees in random forest
-            n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
+            n_estimators = [200, 500, 800, 1000]
             # Criterion
             criterion = ["gini", "entropy", "log_loss"]
             # Number of features to consider at every split
             max_features = ['auto', 'sqrt']
             # Maximum number of levels in tree
-            max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
-            max_depth.append(None)
+            max_depth = [10, 20, 50, 100, None]
             # Minimum number of samples required to split a node
             min_samples_split = [2, 5, 10]
             # Minimum number of samples required at each leaf node
@@ -185,7 +184,7 @@ class Classifier:
             print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
 
             if self.tuning:
-                model = RandomizedSearchCV(estimator=model, param_distributions=parameters, n_iter=150, cv=3,
+                model = RandomizedSearchCV(estimator=model, param_distributions=parameters, n_iter=100, cv=3,
                                            verbose=2, random_state=42, n_jobs=-1)
                 # model = GridSearchCV(estimator=model, param_grid=parameters, cv=5, n_jobs=-1, verbose=2)
 
