@@ -205,7 +205,7 @@ class Main:
 
         start_time = time.time()
         if model_type == 'lstm':
-            classifier.compute_lstm_data(window_dim)
+            classifier.compute_lstm_data(window_dim, overlap, True)
         else:
             if window_dim > 0:
                 classifier.compute_features_on_windows(window_dim, overlap, True)

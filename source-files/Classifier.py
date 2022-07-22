@@ -1,5 +1,6 @@
 import functools
 import math
+import logging
 from collections import defaultdict
 from operator import add
 
@@ -7,22 +8,20 @@ import numpy as np
 import pandas as pd
 import time
 import scipy.stats as sps
-import fastdtw
-from scipy.spatial import distance
-from keras import Sequential
-from keras.layers import LSTM, Dropout, Dense
 from sklearn import metrics
+import DTW
+import LSTM
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from hmmlearn import hmm
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as skm
 from boruta import BorutaPy
-from sklearn.tree import DecisionTreeClassifier
 
 import Features as f
 from TrainingSample import TrainingSample
@@ -115,12 +114,12 @@ class Classifier:
             bootstrap = [True, False]
             # Create the random grid
             parameters = {'n_estimators': n_estimators,
-                           'max_features': max_features,
-                           'max_depth': max_depth,
-                           'min_samples_split': min_samples_split,
-                           'min_samples_leaf': min_samples_leaf,
-                           'bootstrap': bootstrap,
-                           'criterion': criterion}
+                          'max_features': max_features,
+                          'max_depth': max_depth,
+                          'min_samples_split': min_samples_split,
+                          'min_samples_leaf': min_samples_leaf,
+                          'bootstrap': bootstrap,
+                          'criterion': criterion}
             model = RandomForestClassifier(n_estimators=200, criterion='entropy', max_depth=None, min_samples_split=2,
                                            min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features='sqrt',
                                            max_leaf_nodes=None, min_impurity_decrease=0.0, bootstrap=True,
@@ -130,7 +129,7 @@ class Classifier:
             # n_neighbors must be equal or lower than the number of train samples
             parameters = {'n_neighbors': [1, 2, 4, 8]}
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
-                                         metric=Classifier.fast_dtw, metric_params=None)
+                                         metric=DTW.fast_dtw, metric_params=None)
         elif model_type == 'svm':
             parameters = {'C': [10, 20, 40, 80]}
             model = SVC(C=20.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True, probability=False,
@@ -162,7 +161,7 @@ class Classifier:
 
         if model_type == 'lstm':
             epochs, batch_size = 15, 64
-            model = Classifier.lstm(x_train, y_train)
+            model = LSTM.lstm(x_train, y_train)
             print("\nTraining...")
             start_time = time.time()
             model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
@@ -185,7 +184,7 @@ class Classifier:
 
             if self.tuning:
                 model = RandomizedSearchCV(estimator=model, param_distributions=parameters, n_iter=100, cv=3,
-                                           verbose=2, random_state=42, n_jobs=-1)
+                                           random_state=42, n_jobs=-1)
                 # model = GridSearchCV(estimator=model, param_grid=parameters, cv=5, n_jobs=-1, verbose=2)
 
             print("\nTraining...")
@@ -195,8 +194,16 @@ class Classifier:
             print("\n\n--- %s train seconds ---\n\n" % train_seconds)
 
             if self.tuning:
-                print("Best parameters set found on development set:")
-                print(model.best_params_)
+                logging.basicConfig(filename="log.txt", level=logging.INFO)
+                logging.info("Best parameters set found on development set:")
+                logging.info(model.best_params_)
+                logging.info("Grid scores on development set:")
+                means = model.cv_results_["mean_test_score"]
+                stds = model.cv_results_["std_test_score"]
+                for mean, std, params in zip(means, stds, model.cv_results_["params"]):
+                    logging.info("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+                # print("Best parameters set found on development set:")
+                # print(model.best_params_)
                 # print("Grid scores on development set:")
                 # means = model.cv_results_["mean_test_score"]
                 # stds = model.cv_results_["std_test_score"]
@@ -211,7 +218,8 @@ class Classifier:
             print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
             confusion_matrix = skm.confusion_matrix(y_test, prediction)
             for i in range(0, len(y_test)):
-                print('Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
+                print(
+                    'Result: Real: {},  Predicted: {}, Lengths: {}'.format(y_test[i], prediction[i], x_test_lengths[i]))
                 #  print("Test samples: " + str(y_test))
                 #  print("Prediction: " + str(prediction))
             score = model.score(x_test, y_test)
@@ -440,11 +448,14 @@ class Classifier:
             else:
                 # print("Acc window extraction...")
                 new_acc_data, valid, last_acc_split = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
-                                                                                start_epoch, end_epoch, start_next_epoch,
+                                                                                start_epoch, end_epoch,
+                                                                                start_next_epoch,
                                                                                 valid)
                 # print("Gyro window extraction...")
-                new_gyro_data, valid, last_gyro_split = Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data,
-                                                                                  start_epoch, end_epoch, start_next_epoch,
+                new_gyro_data, valid, last_gyro_split = Classifier.extract_window(last_gyro_split, gyro_epochs,
+                                                                                  gyro_data,
+                                                                                  start_epoch, end_epoch,
+                                                                                  start_next_epoch,
                                                                                   valid)
 
                 window = TrainingSample(sample.action_name, new_acc_data, new_gyro_data, sample.sample_num)
@@ -552,30 +563,9 @@ class Classifier:
 
         return window_df, valid, start_next_split, action_name, next_current_action
 
-    @staticmethod
-    def dtw(a, b):
-        an = a.size
-        bn = b.size
-        pointwise_distance = distance.cdist(a.reshape(-1, 1), b.reshape(-1, 1))
-        cumdist = np.matrix(np.ones((an+1, bn+1)) * np.inf)
-        cumdist[0, 0] = 0
-
-        for ai in range(an):
-            for bi in range(bn):
-                minimum_cost = np.min([cumdist[ai, bi+1],
-                                       cumdist[ai+1, bi],
-                                       cumdist[ai, bi]])
-                cumdist[ai+1, bi+1] = pointwise_distance[ai, bi] + minimum_cost
-
-        return cumdist[an, bn]
-
-    @staticmethod
-    def fast_dtw(a, b):
-        return fastdtw.fastdtw(a, b)[0]
-
     # returns a list containing, for every action, an x matrix in which each row contains all the accelerometer and
     # gyroscope axes (6) for all windows and an array y of the row labels
-    def compute_lstm_data(self, window_dim):
+    def compute_lstm_data(self, window_dim, overlap, from_session):
         print("Computing features...")
         x_list = list()
         y_list = list()
@@ -584,7 +574,7 @@ class Classifier:
             x = list()
             y = list()
             for sample in self.training_data[action]:
-                windows = self.split_in_windows(sample, window_dim)
+                windows = self.split_in_windows(sample, window_dim, overlap, from_session)
                 print("Windows number: " + str(len(windows)))
                 print("Window example: " + windows[0].__str__())
                 row = list()
@@ -599,15 +589,3 @@ class Classifier:
             y_list.append(y)
         self.x_list = x_list
         self.y_list = y_list
-
-    @staticmethod
-    def lstm(x_train, y_train):
-        n_timesteps, n_features, n_outputs = x_train.shape[1], x_train.shape[2], y_train.shape[1]
-        model = Sequential()
-        model.add(LSTM(100, input_shape=(n_timesteps, n_features)))
-        model.add(Dropout(0.5))
-        model.add(Dense(100, activation='relu'))
-        model.add(Dense(n_outputs, activation='softmax'))
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        return model
-
