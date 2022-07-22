@@ -236,7 +236,7 @@ class Main:
                 params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
                             ", mavg: " + str(mobile_average_window_dim) + \
                             ", train size: " + str(test_size) + ", wdim: " + str(window_dim/1000000) + \
-                            "s, overlap: " + str(overlap) + ")"
+                            "ms, overlap: " + str(overlap) + ")"
                 if i in scores.keys():
                     new_score, new_cf, new_train_t, new_predict_t = \
                         classifier.classify(model_type, test_size)
@@ -258,7 +258,7 @@ class Main:
         print("\n\nScores...")
         images_folder = training_path_name + "-tries_" + str(tries) + "-model_" + model_type + \
                         "-mavg_" + str(mobile_average_window_dim) + "-wdim_" + str(window_dim/1000000) + \
-                        "s-overlap_" + str(overlap)
+                        "ms-overlap_" + str(overlap)
         for i in range(0, len(scores)):
             print("Score for " + params[i] + ": " + str(scores[i]))
 

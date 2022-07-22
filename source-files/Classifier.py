@@ -19,7 +19,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from hmmlearn import hmm
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as skm
 from boruta import BorutaPy
@@ -100,6 +100,29 @@ class Classifier:
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
                                          metric='minkowski', metric_params=None)
         elif model_type == 'rf':
+            # Number of trees in random forest
+            n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
+            # Criterion
+            criterion = ["gini", "entropy", "log_loss"]
+            # Number of features to consider at every split
+            max_features = ['auto', 'sqrt']
+            # Maximum number of levels in tree
+            max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
+            max_depth.append(None)
+            # Minimum number of samples required to split a node
+            min_samples_split = [2, 5, 10]
+            # Minimum number of samples required at each leaf node
+            min_samples_leaf = [1, 2, 4]
+            # Method of selecting samples for training each tree
+            bootstrap = [True, False]
+            # Create the random grid
+            parameters = {'n_estimators': n_estimators,
+                           'max_features': max_features,
+                           'max_depth': max_depth,
+                           'min_samples_split': min_samples_split,
+                           'min_samples_leaf': min_samples_leaf,
+                           'bootstrap': bootstrap,
+                           'criterion': criterion}
             model = RandomForestClassifier(n_estimators=100, criterion='gini', max_depth=None, min_samples_split=2,
                                            min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features='sqrt',
                                            max_leaf_nodes=None, min_impurity_decrease=0.0, bootstrap=True,
@@ -163,7 +186,9 @@ class Classifier:
             print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
 
             if self.tuning:
-                model = GridSearchCV(model, parameters, cv=5)
+                model = RandomizedSearchCV(estimator=model, param_distributions=parameters, n_iter=150, cv=3,
+                                           verbose=2, random_state=42, n_jobs=-1)
+                # model = GridSearchCV(estimator=model, param_grid=parameters, cv=5, n_jobs=-1, verbose=2)
 
             print("\nTraining...")
             start_time = time.time()
@@ -173,11 +198,8 @@ class Classifier:
 
             if self.tuning:
                 print("Best parameters set found on development set:")
-                print()
                 print(model.best_params_)
-                print()
                 print("Grid scores on development set:")
-                print()
                 means = model.cv_results_["mean_test_score"]
                 stds = model.cv_results_["std_test_score"]
                 for mean, std, params in zip(means, stds, model.cv_results_["params"]):
@@ -522,7 +544,7 @@ class Classifier:
                     if k != "other" or (k == "other" and action_name == ""):
                         duration_max = duration
                         action_name = k
-            print(action_name + ": " + str(len(window_data)))
+            # print(action_name + ": " + str(len(window_data)))
 
         if len(window_data) > 0:
             window_df = pd.DataFrame(window_data, columns=data.columns[:-1])
