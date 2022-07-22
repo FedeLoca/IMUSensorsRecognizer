@@ -218,6 +218,7 @@ class Main:
         train_times = dict()
         predict_times = dict()
         params = dict()
+        test_sizes = [0.05]
         for t in range(tries):
             i = 0
             # for test_size in range(1, max_test_size + 1):
@@ -232,7 +233,8 @@ class Main:
             #         predict_times[i] += new_predict_t
             #         scores[i] += new_score
             #         confusion_matrices[i] += numpy.array(new_cf)
-            for test_size in [round(x, 2) for x in numpy.arange(0.05, 0.95, 0.05)]:
+            # test_sizes = [round(x, 2) for x in numpy.arange(0.05, 0.95, 0.05)]
+            for test_size in test_sizes:
                 params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
                             ", mavg: " + str(mobile_average_window_dim) + \
                             ", train size: " + str(test_size) + ", wdim: " + str(window_dim/1000000) + \
@@ -282,17 +284,15 @@ class Main:
         print(best_string + ": " + str(best))
 
         # plot scores
-        # training_sizes = [x for x in range(1, max_test_size + 1)]
-        training_sizes = [round(x, 2) for x in numpy.arange(0.05, 0.95, 0.05)]
         fig, ax = plt.subplots()
-        plt.plot(training_sizes, list(scores.values())[::-1], color='b', marker='o', linestyle='-',
+        plt.plot(test_sizes, list(scores.values())[::-1], color='b', marker='o', linestyle='-',
                  linewidth=2, markersize=5)
 
         rounded_scores = [round(x, 4) for x in list(scores.values())]
         print(rounded_scores)
         for i in range(scores.values().__len__()):
             ax.annotate(rounded_scores[::-1][i],
-                        xy=(training_sizes[i], list(scores.values())[::-1][i]))
+                        xy=(test_sizes[i], list(scores.values())[::-1][i]))
         plt.ylabel('accuracy')
         plt.xlabel('training size')
         plt.title("Average accuracy plot for " + model_type + " with " + str(tries) + " tries")

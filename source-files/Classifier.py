@@ -1,6 +1,5 @@
 import functools
 import math
-import string
 from collections import defaultdict
 from operator import add
 
@@ -123,7 +122,7 @@ class Classifier:
                            'min_samples_leaf': min_samples_leaf,
                            'bootstrap': bootstrap,
                            'criterion': criterion}
-            model = RandomForestClassifier(n_estimators=100, criterion='gini', max_depth=None, min_samples_split=2,
+            model = RandomForestClassifier(n_estimators=200, criterion='entropy', max_depth=None, min_samples_split=2,
                                            min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features='sqrt',
                                            max_leaf_nodes=None, min_impurity_decrease=0.0, bootstrap=True,
                                            oob_score=False, n_jobs=-1, random_state=None, warm_start=False,
@@ -199,12 +198,12 @@ class Classifier:
             if self.tuning:
                 print("Best parameters set found on development set:")
                 print(model.best_params_)
-                print("Grid scores on development set:")
-                means = model.cv_results_["mean_test_score"]
-                stds = model.cv_results_["std_test_score"]
-                for mean, std, params in zip(means, stds, model.cv_results_["params"]):
-                    print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
-                print()
+                # print("Grid scores on development set:")
+                # means = model.cv_results_["mean_test_score"]
+                # stds = model.cv_results_["std_test_score"]
+                # for mean, std, params in zip(means, stds, model.cv_results_["params"]):
+                #     print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+                # print()
 
             print("\nTest...")
             start_time = time.time()
