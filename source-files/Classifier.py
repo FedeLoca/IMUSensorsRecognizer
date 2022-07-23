@@ -7,6 +7,7 @@ from operator import add
 import numpy as np
 import pandas as pd
 import time
+import random
 import scipy.stats as sps
 from sklearn import metrics
 import DTW
@@ -45,19 +46,42 @@ class Classifier:
         self.n_classes = len(self.num_actions_dict.keys())
         self.mobile_average_window_dim = mobile_average_window_dim
         self.tuning = tuning
+        self.test_indexes = defaultdict(list)
 
     def classify(self, model_type, test_size):
         print("\nPreparing data for training:")
         x_train, y_train, x_test, y_test = list(), list(), list(), list()
-        for (a, l) in self.x_list.items():
-            # random_state=21
-            x_train_el, x_test_el, y_train_el, y_test_el = train_test_split(l, self.y_list[a],
-                                                                            test_size=test_size,
-                                                                            shuffle=True)
-            x_train.extend(x_train_el)
-            y_train.extend(y_train_el)
-            x_test.extend(x_test_el)
-            y_test.extend(y_test_el)
+        # for (a, l) in self.x_list.items():
+        #     # random_state=21
+        #     x_train_el, x_test_el, y_train_el, y_test_el = train_test_split(l, self.y_list[a],
+        #                                                                     test_size=test_size,
+        #                                                                     shuffle=True)
+        #     x_train.extend(x_train_el)
+        #     y_train.extend(y_train_el)
+        #     x_test.extend(x_test_el)
+        #     y_test.extend(y_test_el)
+
+        for (a, segmented_samples) in self.x_list.items():
+            print(a + ": " + str(len(segmented_samples)))
+            # for s in segmented_samples:
+            #     print(str(len(s)))
+            #     for r in s:
+            #         print(str(len(r)))
+            if self.test_indexes.keys().__contains__(a):
+                for i in range(len(self.test_indexes[a])):
+                    x_test.extend(segmented_samples[i])
+                    y_test.extend(self.y_list[a][i])
+            for t in range(test_size - len(self.test_indexes[a])):
+                i = random.randint(0, len(segmented_samples) - 1)
+                self.test_indexes[a].append(i)
+                x_test.extend(segmented_samples[i])
+                y_test.extend(self.y_list[a][i])
+                # self.samples_x_test.append(segmented_samples.pop(i))
+                # self.samples_y_test.append(self.y_list[a].pop(i))
+            for i in range(len(segmented_samples)):
+                if not self.test_indexes[a].__contains__(i):
+                    x_train.extend(segmented_samples[i])
+                    y_train.extend(self.y_list[a][i])
 
         x_test_lengths = 0
         if model_type != 'lstm':
@@ -80,7 +104,8 @@ class Classifier:
         print("### Total samples: " + str(len(y_train) + len(y_test)))
         print("### Train samples: " + str(len(y_train)))
         print("### Test samples: " + str(len(y_test)))
-        print("### Train samples percentage: " + str((1 - test_size) * 100) + "%")
+        # print("### Train samples percentage: " + str((1 - test_size) * 100) + "%")
+        print("### Train samples percentage: " + str(len(y_train) / (len(y_train) + len(y_test)) * 100) + "%")
         valid_windows_n = len(self.valid_windows)
         invalid_windows_n = len(self.invalid_windows)
         if valid_windows_n + invalid_windows_n > 0:
@@ -99,22 +124,22 @@ class Classifier:
                                          metric='minkowski', metric_params=None)
         elif model_type == 'rf':
             # Number of trees in random forest
-            n_estimators = [200, 500, 800, 1000]
+            n_estimators = [200, 800, 1000]
             # Criterion
             criterion = ["gini", "entropy", "log_loss"]
             # Number of features to consider at every split
             max_features = ['auto', 'sqrt']
             # Maximum number of levels in tree
-            max_depth = [10, 20, 50, 100, None]
+            max_depth = [100, None]
             # Minimum number of samples required to split a node
-            min_samples_split = [2, 5, 10]
+            min_samples_split = [2]
             # Minimum number of samples required at each leaf node
-            min_samples_leaf = [1, 2, 4]
+            min_samples_leaf = [2]
             # Method of selecting samples for training each tree
             bootstrap = [True, False]
             # Create the random grid
             parameters = {'n_estimators': n_estimators,
-                          'max_features': max_features,
+                          # 'max_features': max_features,
                           'max_depth': max_depth,
                           'min_samples_split': min_samples_split,
                           'min_samples_leaf': min_samples_leaf,
@@ -261,25 +286,37 @@ class Classifier:
 
     # returns a list containing, for every action, an x matrix in which each row contains all the features for a
     # window and an array y of the row labels
-    def compute_features_on_windows(self, window_dim, overlap, from_session):
+    def compute_features_on_windows(self, window_dim, overlap):
         print("Computing features...")
         x_list = defaultdict(list)
         y_list = defaultdict(list)
-        row_number = 0
+        first_row = True
         for action in self.training_data.keys():
             for sample in self.training_data[action]:
-                windows = self.split_in_windows(sample, window_dim, overlap, from_session)
+                windows = self.split_in_windows(sample, window_dim, overlap)
                 # print("Windows number: " + str(len(windows)))
                 # print("Window example: " + windows[0].__str__())
-                for window in windows:
-                    y_list[window.action_name].append(self.actions_num_dict[window.action_name])
-                    row = self.compute_row(window, row_number)
-                    x_list[window.action_name].append(row)
-                    row_number += 1
+                # for window in windows:
+                #     y_list[window.action_name].append(self.actions_num_dict[window.action_name])
+                #     row = self.compute_row(window, row_number)
+                #     x_list[window.action_name].append(row)
+                #     row_number += 1
+                for (action_name, segmented_samples) in windows.items():
+                    classs = self.actions_num_dict[action_name]
+                    for segmented_sample in segmented_samples:
+                        rows = list()
+                        classes = list()
+                        for window in segmented_sample:
+                            classes.append(classs)
+                            row = self.compute_row(window, first_row)
+                            rows.append(row)
+                            first_row = False
+                        y_list[action_name].append(classes)
+                        x_list[action_name].append(rows)
         self.x_list = x_list
         self.y_list = y_list
 
-    def compute_row(self, sample, row_number):
+    def compute_row(self, sample, first_row):
         row = list()
         acc_x, acc_y, acc_z = sample.get_acc_axes()
         gyro_x, gyro_y, gyro_z = sample.get_gyro_axes()
@@ -287,28 +324,28 @@ class Classifier:
         axes_names = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
 
         # print("Computing mobile averages...")
-        axes = [f.moving_average_conv(a, self.mobile_average_window_dim) for a in axes]
+        # axes = [f.moving_average_conv(a, self.mobile_average_window_dim) for a in axes]
 
         # FEATURES
         # mean
         i = 0
         for a in axes:
             row.append(np.mean(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("mean " + "-" + axes_names[i])
                 i += 1
         # variance
         i = 0
         for a in axes:
             row.append(np.var(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("variance " + "-" + axes_names[i])
                 i += 1
         # standard deviation
         i = 0
         for a in axes:
             row.append(np.std(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("standard deviation " + "-" + axes_names[i])
                 i += 1
         # mean squared error
@@ -322,42 +359,42 @@ class Classifier:
         i = 0
         for a in axes:
             row.append(sps.kurtosis(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("kurtosis " + "-" + axes_names[i])
                 i += 1
         # symmetry
         i = 0
         for a in axes:
             row.append(f.symmetry(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("symmetry " + "-" + axes_names[i])
                 i += 1
         # zero-crossing rate
         i = 0
         for a in axes:
             row.append(f.zero_crossing(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("zero-crossing rate " + "-" + axes_names[i])
                 i += 1
         # difference between max and min
         i = 0
         for a in axes:
             row.append(f.min_max_diff(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("max-min " + "-" + axes_names[i])
                 i += 1
         # number of peaks
         i = 0
         for a in axes:
             row.append(f.peaks_number(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("peaks " + "-" + axes_names[i])
                 i += 1
         # energy
         i = 0
         for a in axes:
             row.append(f.energy(a))
-            if row_number == 0:
+            if first_row:
                 self.feature_names.append("energy " + "-" + axes_names[i])
                 i += 1
         # pearson correlation
@@ -367,7 +404,7 @@ class Classifier:
         row.append(f.correlation(gyro_x, gyro_y))
         row.append(f.correlation(gyro_y, gyro_z))
         row.append(f.correlation(gyro_x, gyro_z))
-        if row_number == 0:
+        if first_row:
             self.feature_names.append("acc correlation xy")
             self.feature_names.append("acc correlation yz")
             self.feature_names.append("acc correlation xz")
@@ -377,7 +414,7 @@ class Classifier:
         # magnitude
         row.append(f.magnitude(acc_x, acc_y, acc_z))
         row.append(f.magnitude(gyro_x, gyro_y, gyro_z))
-        if row_number == 0:
+        if first_row:
             self.feature_names.append("acc magnitude")
             self.feature_names.append("gyro magnitude")
 
@@ -393,10 +430,11 @@ class Classifier:
 
         return row
 
-    def split_in_windows(self, sample, window_dim, overlap, from_session):
+    def split_in_windows(self, sample, window_dim, overlap):
         print("Start splitting sample " + str(sample.sample_num))
 
-        windows = list()
+        windows = defaultdict(list)
+        action_windows = list()
         acc_data = sample.acc_data
         gyro_data = sample.acc_data
 
@@ -427,6 +465,10 @@ class Classifier:
         # print("first " + str(first_epoch))
         # print("last " + str(last_epoch))
         current_action = "other"
+        current_sample_num = -1
+        action_name = "other"
+        sample_num = -1
+        first_window = True
         while start_epoch < last_epoch:
             valid = True
 
@@ -434,80 +476,60 @@ class Classifier:
             # print("start next " + str(start_next_epoch))
             # print("end " + str(end_epoch))
 
-            if from_session:
-                # print("Acc window extraction...")
-                new_acc_data, valid, last_acc_split, action_name, current_action = \
-                    Classifier.extract_session_window(last_acc_split, acc_epochs, acc_data, start_epoch, end_epoch,
-                                                      start_next_epoch, valid, current_action, True)
-                # print("Gyro window extraction...")
-                new_gyro_data, valid, last_gyro_split, _, _ = \
-                    Classifier.extract_session_window(last_gyro_split, gyro_epochs, gyro_data, start_epoch, end_epoch,
-                                                      start_next_epoch, valid, "", False)
+            old_action_name = action_name
+            old_sample_num = sample_num
 
-                window = TrainingSample(action_name, new_acc_data, new_gyro_data, sample.sample_num)
-            else:
-                # print("Acc window extraction...")
-                new_acc_data, valid, last_acc_split = Classifier.extract_window(last_acc_split, acc_epochs, acc_data,
-                                                                                start_epoch, end_epoch,
-                                                                                start_next_epoch,
-                                                                                valid)
-                # print("Gyro window extraction...")
-                new_gyro_data, valid, last_gyro_split = Classifier.extract_window(last_gyro_split, gyro_epochs,
-                                                                                  gyro_data,
-                                                                                  start_epoch, end_epoch,
-                                                                                  start_next_epoch,
-                                                                                  valid)
+            # print("Acc window extraction...")
+            new_acc_data, valid, last_acc_split, action_name, current_action, sample_num, current_sample_num = \
+                Classifier.extract_window(last_acc_split, acc_epochs, acc_data, start_epoch, end_epoch,
+                                          start_next_epoch, valid, current_action, current_sample_num, True)
+            # print("Gyro window extraction...")
+            new_gyro_data, valid, last_gyro_split, _, _, _, _ = \
+                Classifier.extract_window(last_gyro_split, gyro_epochs, gyro_data, start_epoch, end_epoch,
+                                          start_next_epoch, valid, "", -1, False)
 
-                window = TrainingSample(sample.action_name, new_acc_data, new_gyro_data, sample.sample_num)
+            window = TrainingSample(action_name, new_acc_data, new_gyro_data, sample_num)
+
+            if first_window:
+                old_sample_num = sample_num
+                first_window = False
 
             if valid:
                 self.valid_windows.append(window)
-                windows.append(window)
+                if old_sample_num == sample_num:
+                    action_windows.append(window)
+                else:
+                    print(old_action_name + "-" + str(sample.sample_num) + "-" + str(old_sample_num))
+                    windows[old_action_name].append(action_windows)
+                    action_windows = list()
+                    action_windows.append(window)
             else:
                 self.invalid_windows.append(window)
             start_epoch = start_next_epoch
             end_epoch = start_epoch + window_dim
             start_next_epoch = end_epoch - int(window_dim * overlap)
 
+        windows[action_name].append(action_windows)
+
+        # for (action_name, samples_windows) in windows.items():
+        #     print(action_name + ": " + str(len(samples_windows)))
+        #     for sample_windows in samples_windows:
+        #         print(str(len(sample_windows)))
+
         return windows
 
     @staticmethod
-    def extract_window(last_split, epochs, data, start_epoch, end_epoch, start_next_epoch, valid):
-        window_data = list()
-        count = -1
-        start_next_split = -1
-        for i in range(last_split, len(epochs)):
-            count = count + 1
-            row = list()
-            epoch = epochs.iloc[i]
-            if start_next_split < 0 and epoch >= start_next_epoch:
-                start_next_split = i
-
-            if start_epoch <= epoch < end_epoch:
-                for col in data.columns:
-                    row.append(data[col].iloc[i])
-                window_data.append(row)
-            else:
-                break
-
-        print(str(len(window_data)))
-        if len(window_data) > 0:
-            window_df = pd.DataFrame(window_data, columns=data.columns)
-        else:
-            valid = False
-            window_df = pd.DataFrame(columns=data.columns)
-
-        return window_df, valid, start_next_split
-
-    @staticmethod
-    def extract_session_window(last_split, epochs, data, start_epoch, end_epoch, start_next_epoch, valid,
-                               current_action, determine_action):
+    def extract_window(last_split, epochs, data, start_epoch, end_epoch, start_next_epoch, valid,
+                       current_action, current_sample_num, determine_action):
         window_data = list()
         labels = data["label"]
         actions = defaultdict(list)
         actions[current_action].append(start_epoch)
+        sample_nums = defaultdict(list)
+        sample_nums[current_action].append(current_sample_num)
         start_next_split = -1
         next_current_action = current_action
+        next_current_sample_num = current_sample_num
         for i in range(last_split, len(epochs)):
             row = list()
             label = labels.iloc[i]
@@ -515,22 +537,27 @@ class Classifier:
 
             if start_next_split < 0 and epoch >= start_next_epoch:
                 next_current_action = current_action
+                next_current_sample_num = current_sample_num
                 start_next_split = i
 
             if start_epoch <= epoch < end_epoch:
-                if determine_action and not pd.isnull(label) and label != "ciak":
+                if determine_action and not pd.isnull(label) and label != "ciak" and not "no" in label:
                     split_extra_column = label.split(" ")
                     # print(actions)
                     if split_extra_column[0] == "start":
                         current_action = split_extra_column[2]
+                        current_sample_num = split_extra_column[1]
                         actions["other"][-1] = epoch - actions["other"][-1]
                         actions[current_action].append(epoch)
+                        sample_nums[current_action].append(current_sample_num)
                         # print("START " + split_extra_column[2])
                     elif split_extra_column[0] == "end":
                         # print("END " + split_extra_column[2])
                         current_action = "other"
+                        current_sample_num = -1
                         actions[split_extra_column[2]][-1] = epoch - actions[split_extra_column[2]][-1]
                         actions["other"].append(epoch)
+                        sample_nums["other"].append(current_sample_num)
 
                 for col in data.columns[:-1]:
                     row.append(data[col].iloc[i])
@@ -540,6 +567,7 @@ class Classifier:
                 break
 
         action_name = None
+        sample_num = None
         if determine_action:
             duration_max = -1
             action_name = ""
@@ -550,9 +578,10 @@ class Classifier:
                     duration = functools.reduce(add, v)
 
                 if duration > duration_max:
-                    if k != "other" or (k == "other" and action_name == ""):
-                        duration_max = duration
-                        action_name = k
+                    # if k != "other" or (k == "other" and action_name == ""):
+                    duration_max = duration
+                    action_name = k
+                    sample_num = sample_nums[k][v.index(max(v))]
             # print(action_name + ": " + str(len(window_data)))
 
         if len(window_data) > 0:
@@ -561,11 +590,11 @@ class Classifier:
             valid = False
             window_df = pd.DataFrame(columns=data.columns[:-1])
 
-        return window_df, valid, start_next_split, action_name, next_current_action
+        return window_df, valid, start_next_split, action_name, next_current_action, sample_num, next_current_sample_num
 
     # returns a list containing, for every action, an x matrix in which each row contains all the accelerometer and
     # gyroscope axes (6) for all windows and an array y of the row labels
-    def compute_lstm_data(self, window_dim, overlap, from_session):
+    def compute_lstm_data(self, window_dim, overlap):
         print("Computing features...")
         x_list = list()
         y_list = list()
@@ -574,7 +603,7 @@ class Classifier:
             x = list()
             y = list()
             for sample in self.training_data[action]:
-                windows = self.split_in_windows(sample, window_dim, overlap, from_session)
+                windows = self.split_in_windows(sample, window_dim, overlap)
                 print("Windows number: " + str(len(windows)))
                 print("Window example: " + windows[0].__str__())
                 row = list()

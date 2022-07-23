@@ -1,10 +1,10 @@
 import collections
-import csv
 
-import pandas
+import pandas as pd
 import os
 from TrainingSample import TrainingSample
 from TestSample import TestSample
+import MobileAVG
 
 
 class DataRetriever:
@@ -35,12 +35,12 @@ class DataRetriever:
             # parse the path to retrieve the file name
             file_name = file_paths_list[i].split(os.sep)[-1]
             if "ACC" in file_name:  # if the file name contains ACC it means it contains accelerometer data
-                df = pandas.read_csv(file_paths_list[i])
+                df = pd.read_csv(file_paths_list[i])
                 df.dropna(inplace=True)
                 df.reset_index(drop=True, inplace=True)
                 acc_data = df
             else:  # otherwise, it contains gyroscope data
-                df = pandas.read_csv(file_paths_list[i])
+                df = pd.read_csv(file_paths_list[i])
                 df.dropna(inplace=True)
                 df.reset_index(drop=True, inplace=True)
                 gyro_data = df
@@ -106,7 +106,7 @@ class DataRetriever:
         return samples
 
     @staticmethod
-    def retrieve_train_session_data(folder):
+    def retrieve_train_session_data(folder, mobile_average_window_dim):
         print("\nRetrieving training samples:")
         # go to data folder (each folder in it represents a SESSION) and create a dictionary associating
         # every SESSION to its folder's path
@@ -127,9 +127,20 @@ class DataRetriever:
                 print("Retrieving data from file " + file_name_ext)
 
                 if "ACC" in file_name:
-                    acc_data = pandas.read_csv(file_paths_list[i], skiprows=[0], names=DataRetriever.header_labelled)
+                    acc_data = pd.read_csv(file_paths_list[i], skiprows=[0], names=DataRetriever.header_labelled)
+                    if mobile_average_window_dim > 1:
+                        print("Computing mobile averages for sample " + str(k))
+                        print("Acc data length before: " + str(len(acc_data.index)))
+                        acc_data = MobileAVG.compute_mobile_average(acc_data, mobile_average_window_dim)
+                        print("Acc data length after: " + str(len(acc_data.index)))
+
                 else:
-                    gyro_data = pandas.read_csv(file_paths_list[i], skiprows=[0], names=DataRetriever.header_labelled)
+                    gyro_data = pd.read_csv(file_paths_list[i], skiprows=[0], names=DataRetriever.header_labelled)
+                    if mobile_average_window_dim > 1:
+                        print("Computing mobile averages for sample " + str(k))
+                        print("Gyro data length before: " + str(len(gyro_data.index)))
+                        gyro_data = MobileAVG.compute_mobile_average(gyro_data, mobile_average_window_dim)
+                        print("Gyro data length after: " + str(len(gyro_data.index)))
 
             samples["SESSION"].append(TrainingSample("SESSION", acc_data, gyro_data, k))
 

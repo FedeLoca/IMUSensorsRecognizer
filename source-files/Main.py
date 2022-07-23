@@ -195,7 +195,8 @@ class Main:
         training_path_name = training_path
         training_path = ".." + os.sep + training_path
         # training_data = DataRetriever.retrieve_training_data(training_path)
-        training_data = DataRetriever.retrieve_train_session_data(training_path.replace("-O", "") + "-sessions")
+        training_data = DataRetriever.retrieve_train_session_data(training_path.replace("-O", "") + "-sessions",
+                                                                  mobile_average_window_dim)
         # test_path = ".." + os.sep + test_path
         # test_data = DataRetriever.retrieve_test_data(test_path)
         print("\n\n--- %s retrieve data seconds ---\n\n" % (time.time() - start_time))
@@ -205,10 +206,10 @@ class Main:
 
         start_time = time.time()
         if model_type == 'lstm':
-            classifier.compute_lstm_data(window_dim, overlap, True)
+            classifier.compute_lstm_data(window_dim, overlap)
         else:
             if window_dim > 0:
-                classifier.compute_features_on_windows(window_dim, overlap, True)
+                classifier.compute_features_on_windows(window_dim, overlap)
             else:
                 classifier.compute_features()
         print("\n\n--- %s compute features seconds ---\n\n" % (time.time() - start_time))
@@ -218,27 +219,16 @@ class Main:
         train_times = dict()
         predict_times = dict()
         params = dict()
-        test_sizes = [0.05]
+        # test_sizes = [round(x, 2) for x in numpy.arange(0.05, 0.95, 0.05)]
+        # test_sizes = range(1, max_test_size + 1)
+        test_sizes = [x for x in range(5, 21, 5)]
         for t in range(tries):
             i = 0
-            # for test_size in range(1, max_test_size + 1):
-            #     params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
-            #                 ", mavg: " + str(mobile_average_window_dim) + \
-            #                 ", train size: " + str(max_test_size + 1 - test_size) + "/" + str(max_test_size + 1) + ")"
-            #     if i in scores.keys():
-            #
-            #         new_score, new_cf, new_train_t, new_predict_t = \
-            #             classifier.classify(model_type, test_size / (max_test_size + 1))
-            #         train_times[i] += new_train_t
-            #         predict_times[i] += new_predict_t
-            #         scores[i] += new_score
-            #         confusion_matrices[i] += numpy.array(new_cf)
-            # test_sizes = [round(x, 2) for x in numpy.arange(0.05, 0.95, 0.05)]
             for test_size in test_sizes:
                 params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
                             ", mavg: " + str(mobile_average_window_dim) + \
-                            ", train size: " + str(test_size) + ", wdim: " + str(window_dim/1000000) + \
-                            "ms, overlap: " + str(overlap) + ")"
+                            ", train size: " + str(max_test_size + 1 - test_size) + "/" + str(max_test_size + 1) + \
+                            ", win dim: " + str(window_dim/1000000) + "s, overlap: " + str(overlap)
                 if i in scores.keys():
                     new_score, new_cf, new_train_t, new_predict_t = \
                         classifier.classify(model_type, test_size)
@@ -250,6 +240,22 @@ class Main:
                     scores[i], confusion_matrices[i], train_times[i], predict_times[i] = \
                         classifier.classify(model_type, test_size)
                 i += 1
+            # for test_size in test_sizes:
+            #     params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
+            #                 ", mavg: " + str(mobile_average_window_dim) + \
+            #                 ", train size: " + str(test_size) + ", wdim: " + str(window_dim/1000000) + \
+            #                 "ms, overlap: " + str(overlap) + ")"
+            #     if i in scores.keys():
+            #         new_score, new_cf, new_train_t, new_predict_t = \
+            #             classifier.classify(model_type, test_size)
+            #         train_times[i] += new_train_t
+            #         predict_times[i] += new_predict_t
+            #         scores[i] += new_score
+            #         confusion_matrices[i] += numpy.array(new_cf)
+            #     else:
+            #         scores[i], confusion_matrices[i], train_times[i], predict_times[i] = \
+            #             classifier.classify(model_type, test_size)
+            #     i += 1
         for i in range(0, len(scores)):
             scores[i] = scores[i] / tries
             # confusion_matrices[i] = confusion_matrices[i] / tries
