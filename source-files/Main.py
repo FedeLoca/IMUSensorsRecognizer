@@ -224,6 +224,7 @@ class Main:
         test_sizes = [x for x in range(5, 21, 5)]
         for t in range(tries):
             i = 0
+            new_try = True
             for test_size in test_sizes:
                 params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
                             ", mavg: " + str(mobile_average_window_dim) + \
@@ -231,15 +232,16 @@ class Main:
                             ", win dim: " + str(window_dim/1000000) + "s, overlap: " + str(overlap)
                 if i in scores.keys():
                     new_score, new_cf, new_train_t, new_predict_t = \
-                        classifier.classify(model_type, test_size)
+                        classifier.classify(model_type, test_size, new_try)
                     train_times[i] += new_train_t
                     predict_times[i] += new_predict_t
                     scores[i] += new_score
                     confusion_matrices[i] += numpy.array(new_cf)
                 else:
                     scores[i], confusion_matrices[i], train_times[i], predict_times[i] = \
-                        classifier.classify(model_type, test_size)
+                        classifier.classify(model_type, test_size, new_try)
                 i += 1
+                new_try = False
             # for test_size in test_sizes:
             #     params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
             #                 ", mavg: " + str(mobile_average_window_dim) + \

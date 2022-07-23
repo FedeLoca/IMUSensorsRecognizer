@@ -48,7 +48,7 @@ class Classifier:
         self.tuning = tuning
         self.test_indexes = defaultdict(list)
 
-    def classify(self, model_type, test_size):
+    def classify(self, model_type, test_size, new_try):
         print("\nPreparing data for training:")
         x_train, y_train, x_test, y_test = list(), list(), list(), list()
         # for (a, l) in self.x_list.items():
@@ -60,6 +60,9 @@ class Classifier:
         #     y_train.extend(y_train_el)
         #     x_test.extend(x_test_el)
         #     y_test.extend(y_test_el)
+
+        if new_try:
+            self.test_indexes = defaultdict(list)
 
         for (a, segmented_samples) in self.x_list.items():
             print(a + ": " + str(len(segmented_samples)))
