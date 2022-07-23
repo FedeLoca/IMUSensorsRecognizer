@@ -1,9 +1,10 @@
 import fastdtw
+from dtaidistance import dtw
 from scipy.spatial import distance
 import numpy as np
 
 
-def dtw(a, b):
+def my_dtw(a, b):
     an = a.size
     bn = b.size
     pointwise_distance = distance.cdist(a.reshape(-1, 1), b.reshape(-1, 1))
@@ -22,3 +23,8 @@ def dtw(a, b):
 
 def fast_dtw(a, b):
     return fastdtw.fastdtw(a, b)[0]
+
+
+def pruned_dtw(a, b):
+    dtw.distance(a, b, window=10, use_pruning=True)
+

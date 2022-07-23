@@ -63,6 +63,7 @@ class Classifier:
 
         for (a, segmented_samples) in self.x_list.items():
             print(a + ": " + str(len(segmented_samples)))
+            print(self.test_indexes[a])
             # for s in segmented_samples:
             #     print(str(len(s)))
             #     for r in s:
@@ -72,7 +73,12 @@ class Classifier:
                     x_test.extend(segmented_samples[i])
                     y_test.extend(self.y_list[a][i])
             for t in range(test_size - len(self.test_indexes[a])):
-                i = random.randint(0, len(segmented_samples) - 1)
+                done = False
+                i = -1
+                while not done:
+                    i = random.randint(0, len(segmented_samples) - 1)
+                    if i not in self.test_indexes[a]:
+                        done = True
                 self.test_indexes[a].append(i)
                 x_test.extend(segmented_samples[i])
                 y_test.extend(self.y_list[a][i])
@@ -121,7 +127,7 @@ class Classifier:
             # n_neighbors must be equal or lower than the number of train samples
             parameters = {'n_neighbors': [1, 2, 4, 8]}
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
-                                         metric='minkowski', metric_params=None)
+                                         metric='minkowski', metric_params=None, n_jobs=-1)
         elif model_type == 'rf':
             # Number of trees in random forest
             n_estimators = [200, 800, 1000]
@@ -154,7 +160,7 @@ class Classifier:
             # n_neighbors must be equal or lower than the number of train samples
             parameters = {'n_neighbors': [1, 2, 4, 8]}
             model = KNeighborsClassifier(n_neighbors=1, weights='uniform', algorithm='auto', leaf_size=30, p=2,
-                                         metric=DTW.fast_dtw, metric_params=None)
+                                         metric=DTW.pruned_dtw, metric_params=None, n_jobs=-1)
         elif model_type == 'svm':
             parameters = {'C': [10, 20, 40, 80]}
             model = SVC(C=20.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=True, probability=False,
