@@ -48,7 +48,7 @@ class Classifier:
         self.tuning = tuning
         self.test_indexes = defaultdict(list)
 
-    def classify(self, model_type, test_size, new_try):
+    def classify(self, model_type, test_size, max_test_size, new_try):
         print("\nPreparing data for training:")
         x_train, y_train, x_test, y_test = list(), list(), list(), list()
         # for (a, l) in self.x_list.items():
@@ -65,8 +65,6 @@ class Classifier:
             self.test_indexes = defaultdict(list)
 
         for (a, segmented_samples) in self.x_list.items():
-            print(a + ": " + str(len(segmented_samples)))
-            print(self.test_indexes[a])
             # for s in segmented_samples:
             #     print(str(len(s)))
             #     for r in s:
@@ -87,10 +85,17 @@ class Classifier:
                 y_test.extend(self.y_list[a][i])
                 # self.samples_x_test.append(segmented_samples.pop(i))
                 # self.samples_y_test.append(self.y_list[a].pop(i))
+            print(a + ": " + str(len(segmented_samples)))
+            print(self.test_indexes[a])
+            count = max_test_size + 1 - test_size
+            print("count: " + str(count))
             for i in range(len(segmented_samples)):
                 if not self.test_indexes[a].__contains__(i):
                     x_train.extend(segmented_samples[i])
                     y_train.extend(self.y_list[a][i])
+                    count -= 1
+                    if count == 0:
+                        break
 
         x_test_lengths = 0
         if model_type != 'lstm':

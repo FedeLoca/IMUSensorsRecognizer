@@ -232,14 +232,14 @@ class Main:
                             ", win dim: " + str(window_dim/1000000) + "s, overlap: " + str(overlap)
                 if i in scores.keys():
                     new_score, new_cf, new_train_t, new_predict_t = \
-                        classifier.classify(model_type, test_size, new_try)
+                        classifier.classify(model_type, test_size, max_test_size, new_try)
                     train_times[i] += new_train_t
                     predict_times[i] += new_predict_t
                     scores[i] += new_score
                     confusion_matrices[i] += numpy.array(new_cf)
                 else:
                     scores[i], confusion_matrices[i], train_times[i], predict_times[i] = \
-                        classifier.classify(model_type, test_size, new_try)
+                        classifier.classify(model_type, test_size, max_test_size, new_try)
                 i += 1
                 new_try = False
             # for test_size in test_sizes:
