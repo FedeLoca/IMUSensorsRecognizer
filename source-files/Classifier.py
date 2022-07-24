@@ -310,6 +310,8 @@ class Classifier:
                 #     row = self.compute_row(window, row_number)
                 #     x_list[window.action_name].append(row)
                 #     row_number += 1
+                if "invalid" in windows.keys():
+                    print("invalid: " + str(len(windows.pop("invalid"))))
                 for (action_name, segmented_samples) in windows.items():
                     classs = self.actions_num_dict[action_name]
                     for segmented_sample in segmented_samples:
@@ -501,11 +503,12 @@ class Classifier:
 
             if first_window:
                 old_sample_num = sample_num
+                old_action_name = action_name
                 first_window = False
 
             if valid:
                 self.valid_windows.append(window)
-                if old_sample_num == sample_num:
+                if old_sample_num == sample_num and old_action_name == action_name:
                     action_windows.append(window)
                 else:
                     print(old_action_name + "-" + str(sample.sample_num) + "-" + str(old_sample_num))
@@ -550,11 +553,14 @@ class Classifier:
                 start_next_split = i
 
             if start_epoch <= epoch < end_epoch:
-                if determine_action and not pd.isnull(label) and label != "ciak" and not "no" in label:
+                if determine_action and not pd.isnull(label) and label != "ciak":
                     split_extra_column = label.split(" ")
                     # print(actions)
                     if split_extra_column[0] == "start":
-                        current_action = split_extra_column[2]
+                        if "no" in label:
+                            current_action = "invalid"
+                        else:
+                            current_action = split_extra_column[2]
                         current_sample_num = split_extra_column[1]
                         actions["other"][-1] = epoch - actions["other"][-1]
                         actions[current_action].append(epoch)
@@ -564,7 +570,10 @@ class Classifier:
                         # print("END " + split_extra_column[2])
                         current_action = "other"
                         current_sample_num = -1
-                        actions[split_extra_column[2]][-1] = epoch - actions[split_extra_column[2]][-1]
+                        if "no" in label:
+                            actions["invalid"][-1] = epoch - actions["invalid"][-1]
+                        else:
+                            actions[split_extra_column[2]][-1] = epoch - actions[split_extra_column[2]][-1]
                         actions["other"].append(epoch)
                         sample_nums["other"].append(current_sample_num)
 
