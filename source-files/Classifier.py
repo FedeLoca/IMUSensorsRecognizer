@@ -10,6 +10,8 @@ import time
 import random
 import scipy.stats as sps
 from sklearn import metrics
+from tensorflow.python.keras.utils.np_utils import to_categorical
+
 import DTW
 import LSTM
 from sklearn.linear_model import LogisticRegression
@@ -23,6 +25,8 @@ from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as skm
 from boruta import BorutaPy
+
+from keras.preprocessing.sequence import pad_sequences
 
 import Features as f
 from TrainingSample import TrainingSample
@@ -63,6 +67,8 @@ class Classifier:
 
         if new_try:
             self.test_indexes = defaultdict(list)
+
+        classes_num = len(self.x_list.keys())
 
         for (a, segmented_samples) in self.x_list.items():
             # for s in segmented_samples:
@@ -109,10 +115,15 @@ class Classifier:
             x_test = np.delete(x_test, np.s_[len(self.feature_names):], 1)
             y_test = np.array(y_test)
         else:
-            x_train = np.array(x_train, dtype=object)
-            y_train = np.array(y_train)
-            x_test = np.array(x_test, dtype=object)
-            y_test = np.array(y_test)
+            max_sequence_length = 1000
+            x_train = pad_sequences(x_train, maxlen=max_sequence_length, value=0.0)  # 0.0 because it corresponds with <PAD>
+            x_test = pad_sequences(x_test, maxlen=max_sequence_length, value=0.0)  # 0.0 because it corresponds with <PAD>
+            x_train = np.asarray(x_train).astype(np.float32)
+            print("shape x: " + str(x_train.shape))
+            y_train = np.asarray(y_train).astype(np.int32)
+            print("shape y: " + str(y_train.shape))
+            x_test = np.asarray(x_test).astype(np.float32)
+            y_test = np.asarray(y_test).astype(np.int32)
 
         print("### Features number: " + str(len(x_test[0])))
         print("### Total samples: " + str(len(y_train) + len(y_test)))
@@ -200,23 +211,27 @@ class Classifier:
 
         if model_type == 'lstm':
             epochs, batch_size = 15, 64
-            model = LSTM.lstm(x_train, y_train)
+            non_categorical_y_test = y_test
+            y_train = to_categorical(y_train, classes_num)
+            y_test = to_categorical(y_test, classes_num)
+            model = LSTM.lstm(classes_num, x_train, y_train)
             print("\nTraining...")
             start_time = time.time()
             model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
             train_seconds = time.time() - start_time
-            print("\n\n--- %s train seconds ---\n\n" % train_seconds)
+            print("\n\n--- %s train seconds per sample ---\n\n" % (train_seconds / len(y_train)))
 
             print("\nTest...")
             start_time = time.time()
-            prediction = model.predict(x_test, y_test, batch_size=batch_size)
+            y_pred = model.predict(x_test, batch_size=batch_size)
             predict_seconds = time.time() - start_time
-            print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
-            y_pred = (prediction > 0.5)
-            confusion_matrix = metrics.confusion_matrix(y_test.argmax(axis=1), y_pred.argmax(axis=1))
+            print("\n\n--- %s predict seconds per sample ---\n\n" % (predict_seconds / len(y_test)))
+            print(y_pred)
+            y_pred = y_pred.argmax(axis=-1)  # pick for each test sample the label with highest probability as the predicted label
+            confusion_matrix = metrics.confusion_matrix(non_categorical_y_test, y_pred)
             for i in range(0, len(y_test)):
-                print('Result: Real: {},  Predicted: {}'.format(y_test[i], prediction[i]))
-            score = model.score(x_test, y_test)
+                print('Result: Real: {},  Predicted: {}'.format(non_categorical_y_test[i], y_pred[i]))
+            score = model.evaluate(x_test, y_test, batch_size=batch_size)[1]
             print("Score: " + str(score))
         else:
             print("Are all values valid? " + str(not np.any(np.isnan(x_train)) and np.all(np.isfinite(x_train))))
@@ -616,28 +631,34 @@ class Classifier:
         return window_df, valid, start_next_split, action_name, next_current_action, sample_num, next_current_sample_num
 
     # returns a list containing, for every action, an x matrix in which each row contains all the accelerometer and
-    # gyroscope axes (6) for all windows and an array y of the row labels
+    # gyroscope axes (6) for all windows (batches) and an array y of the row labels
     def compute_lstm_data(self, window_dim, overlap):
         print("Computing features...")
-        x_list = list()
-        y_list = list()
-        row_number = 0
+        x_list = defaultdict(list)
+        y_list = defaultdict(list)
         for action in self.training_data.keys():
-            x = list()
-            y = list()
             for sample in self.training_data[action]:
                 windows = self.split_in_windows(sample, window_dim, overlap)
-                print("Windows number: " + str(len(windows)))
-                print("Window example: " + windows[0].__str__())
-                row = list()
-                for window in windows:
-                    acc_x, acc_y, acc_z = window.get_acc_axes()
-                    gyro_x, gyro_y, gyro_z = window.get_gyro_axes()
-                    row.append([acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z])
-                x.append(row)
-                y.append(self.actions_num_dict[action])
-                row_number += 1
-            x_list.append(x)
-            y_list.append(y)
+                # print("Windows number: " + str(len(windows)))
+                # print("Window example: " + windows[0].__str__())
+                if "invalid" in windows.keys():
+                    print("invalid: " + str(len(windows.pop("invalid"))))
+                for (action_name, segmented_samples) in windows.items():
+                    classs = self.actions_num_dict[action_name]
+                    for segmented_sample in segmented_samples:
+                        rows = list()
+                        classes = list()
+                        for window in segmented_sample:
+                            classes.append(classs)
+                            row = list()
+                            acc_x, acc_y, acc_z = window.get_acc_axes()
+                            gyro_x, gyro_y, gyro_z = window.get_gyro_axes()
+                            for i in range(len(acc_x)):
+                                row.append([acc_x.iloc[i], acc_y.iloc[i], acc_z.iloc[i], gyro_x.iloc[i], gyro_y.iloc[i],
+                                            gyro_z.iloc[i]])
+                            rows.append(row)
+                        y_list[action_name].append(classes)
+                        x_list[action_name].append(rows)
         self.x_list = x_list
         self.y_list = y_list
+

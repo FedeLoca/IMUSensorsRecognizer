@@ -26,5 +26,6 @@ def fast_dtw(a, b):
 
 
 def pruned_dtw(a, b):
-    dtw.distance(a, b, window=10, use_pruning=True)
+    # window=10
+    dtw.distance(a, b, window=None, max_dist=None, use_c=True, use_pruning=False)
 
