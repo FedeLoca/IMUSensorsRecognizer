@@ -115,9 +115,12 @@ class Classifier:
             x_test = np.delete(x_test, np.s_[len(self.feature_names):], 1)
             y_test = np.array(y_test)
         else:
-            max_sequence_length = 1000
-            x_train = pad_sequences(x_train, maxlen=max_sequence_length, value=0.0)  # 0.0 because it corresponds with <PAD>
-            x_test = pad_sequences(x_test, maxlen=max_sequence_length, value=0.0)  # 0.0 because it corresponds with <PAD>
+            max_sequence_length = max([len(x) for x in x_train])
+            max_sequence_length += int(max_sequence_length * 0.25)
+            # 0.0 because it corresponds with <PAD>
+            x_train = pad_sequences(x_train, maxlen=max_sequence_length, value=0.0, padding="pre")
+            x_test = pad_sequences(x_test, maxlen=max_sequence_length, value=0.0, padding="pre")
+            print("Max batch size: " + str(max_sequence_length))
             x_train = np.asarray(x_train).astype(np.float32)
             print("shape x: " + str(x_train.shape))
             y_train = np.asarray(y_train).astype(np.int32)
@@ -219,14 +222,17 @@ class Classifier:
             start_time = time.time()
             model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
             train_seconds = time.time() - start_time
-            print("\n\n--- %s train seconds per sample ---\n\n" % (train_seconds / len(y_train)))
+            train_seconds_per_sample = train_seconds / len(y_train)
+            print("\n\n--- %s train seconds ---\n\n" % train_seconds)
+            print("\n\n--- %s train seconds per sample ---\n\n" % train_seconds_per_sample)
 
             print("\nTest...")
             start_time = time.time()
             y_pred = model.predict(x_test, batch_size=batch_size)
             predict_seconds = time.time() - start_time
-            print("\n\n--- %s predict seconds per sample ---\n\n" % (predict_seconds / len(y_test)))
-            print(y_pred)
+            predict_seconds_per_sample = predict_seconds / len(y_test)
+            print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
+            print("\n\n--- %s predict seconds per sample ---\n\n" % predict_seconds_per_sample)
             y_pred = y_pred.argmax(axis=-1)  # pick for each test sample the label with highest probability as the predicted label
             confusion_matrix = metrics.confusion_matrix(non_categorical_y_test, y_pred)
             for i in range(0, len(y_test)):
@@ -245,7 +251,9 @@ class Classifier:
             start_time = time.time()
             model.fit(x_train, y_train)
             train_seconds = time.time() - start_time
+            train_seconds_per_sample = train_seconds / len(y_train)
             print("\n\n--- %s train seconds ---\n\n" % train_seconds)
+            print("\n\n--- %s train seconds ---\n\n" % train_seconds_per_sample)
 
             if self.tuning:
                 logging.basicConfig(filename="log.txt", level=logging.INFO)
@@ -269,7 +277,9 @@ class Classifier:
             start_time = time.time()
             prediction = model.predict(x_test)
             predict_seconds = time.time() - start_time
+            predict_seconds_per_sample = predict_seconds / len(y_test)
             print("\n\n--- %s predict seconds ---\n\n" % predict_seconds)
+            print("\n\n--- %s predict seconds per sample ---\n\n" % predict_seconds_per_sample)
             confusion_matrix = skm.confusion_matrix(y_test, prediction)
             for i in range(0, len(y_test)):
                 print(
@@ -291,7 +301,7 @@ class Classifier:
         print("\nNew number of features: " + str(len(x_train_filtered)))
         '''
 
-        return score, confusion_matrix, train_seconds, predict_seconds
+        return score, confusion_matrix, train_seconds_per_sample, predict_seconds_per_sample
 
     # returns a list containing, for every action, an x matrix in which each row contains all the features for a
     # sample and an array y of the row labels
@@ -467,7 +477,7 @@ class Classifier:
         windows = defaultdict(list)
         action_windows = list()
         acc_data = sample.acc_data
-        gyro_data = sample.acc_data
+        gyro_data = sample.gyro_data
 
         # start splitting when all sensors started collecting data and finish when any sensor stopped collecting data
         # print(acc_data.columns.tolist())
@@ -636,6 +646,7 @@ class Classifier:
         print("Computing features...")
         x_list = defaultdict(list)
         y_list = defaultdict(list)
+        # first_row = True
         for action in self.training_data.keys():
             for sample in self.training_data[action]:
                 windows = self.split_in_windows(sample, window_dim, overlap)
@@ -645,17 +656,61 @@ class Classifier:
                     print("invalid: " + str(len(windows.pop("invalid"))))
                 for (action_name, segmented_samples) in windows.items():
                     classs = self.actions_num_dict[action_name]
+                    a = True
                     for segmented_sample in segmented_samples:
                         rows = list()
                         classes = list()
+                        print("slen: " + str(len(segmented_sample)))
                         for window in segmented_sample:
                             classes.append(classs)
                             row = list()
                             acc_x, acc_y, acc_z = window.get_acc_axes()
                             gyro_x, gyro_y, gyro_z = window.get_gyro_axes()
-                            for i in range(len(acc_x)):
-                                row.append([acc_x.iloc[i], acc_y.iloc[i], acc_z.iloc[i], gyro_x.iloc[i], gyro_y.iloc[i],
-                                            gyro_z.iloc[i]])
+                            acc_len, gyro_len = len(acc_x), len(gyro_x)
+                            if a:
+                                print(acc_x)
+                                print(gyro_x)
+                                a = False
+                            if gyro_len == acc_len:
+                                for i in range(acc_len):
+                                    row.append([acc_x.iloc[i], acc_y.iloc[i], acc_z.iloc[i],
+                                                gyro_x.iloc[i], gyro_y.iloc[i], gyro_z.iloc[i]])
+                            elif gyro_len > acc_len:
+                                print("alen: " + str(acc_len) + ", glen: " + str(gyro_len))
+                                start_row = 1
+                                acc_epochs, gyro_epochs = window.acc_data["epoch"], window.gyro_data["epoch"]
+                                for i in range(acc_len):
+                                    if start_row == gyro_len:
+                                        row.append([acc_x.iloc[i], acc_y.iloc[i], acc_z.iloc[i],
+                                                    gyro_x.iloc[start_row - 1], gyro_y.iloc[start_row - 1],
+                                                    gyro_z.iloc[start_row - 1]])
+                                        break
+                                    for j in range(start_row, gyro_len):
+                                        if gyro_epochs.iloc[j - 1] <= acc_epochs.iloc[i] <= gyro_epochs.iloc[j]:
+                                            row.append([acc_x.iloc[i], acc_y.iloc[i], acc_z.iloc[i],
+                                                        gyro_x.iloc[j - 1], gyro_y.iloc[j - 1], gyro_z.iloc[j - 1]])
+                                            start_row += 1
+                                            break
+                                print("rlen: " + str(len(row)))
+                            else:
+                                print("alen: " + str(acc_len) + ", glen: " + str(gyro_len))
+                                start_row = 1
+                                acc_epochs, gyro_epochs = window.acc_data["epoch"], window.gyro_data["epoch"]
+                                for i in range(gyro_len):
+                                    if start_row >= acc_len:
+                                        row.append([acc_x.iloc[start_row - 1], acc_y.iloc[start_row - 1],
+                                                    acc_z.iloc[start_row - 1], gyro_x.iloc[i], gyro_y.iloc[i],
+                                                    gyro_z.iloc[i]])
+                                        break
+                                    for j in range(start_row, acc_len):
+                                        if acc_epochs.iloc[j - 1] <= gyro_epochs.iloc[i] <= acc_epochs.iloc[j]:
+                                            row.append([acc_x.iloc[j - 1], acc_y.iloc[j - 1], acc_z.iloc[j - 1],
+                                                        gyro_x.iloc[i], gyro_y.iloc[i], gyro_z.iloc[i]])
+                                            start_row += 1
+                                            break
+                                print("rlen: " + str(len(row)))
+                            # row = self.compute_row(window, first_row)
+                            # first_row = False
                             rows.append(row)
                         y_list[action_name].append(classes)
                         x_list[action_name].append(rows)

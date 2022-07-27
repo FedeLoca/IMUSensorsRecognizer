@@ -316,7 +316,7 @@ class Main:
             sum = sum + n
             c = c + 1
         avg = sum / c
-        print("Average train time per sample: " + str(avg))
+        print("Average train time per sample: " + str(avg) + " s")
 
         sum = 0
         c = 0
@@ -324,4 +324,4 @@ class Main:
             sum = sum + n
             c = c + 1
         avg = sum / c
-        print("Average predict time per sample: " + str(avg))
+        print("Average predict time per sample: " + str(avg) + " s")
