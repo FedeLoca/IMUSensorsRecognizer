@@ -229,7 +229,7 @@ class Main:
                 params[i] = "(tries: " + str(tries) + ", model: " + model_type + \
                             ", mavg: " + str(mobile_average_window_dim) + \
                             ", train size: " + str(max_test_size + 1 - test_size) + "/" + str(max_test_size + 1) + \
-                            ", win dim: " + str(window_dim/1000000) + "s, overlap: " + str(overlap)
+                            ", win dim: " + str(window_dim/1000000) + "ms, overlap: " + str(overlap)
                 if i in scores.keys():
                     new_score, new_cf, new_train_t, new_predict_t = \
                         classifier.classify(model_type, test_size, max_test_size, new_try)

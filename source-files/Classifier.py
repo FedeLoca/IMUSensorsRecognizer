@@ -26,7 +26,7 @@ from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as skm
 from boruta import BorutaPy
 
-from keras.preprocessing.sequence import pad_sequences
+from keras_preprocessing.sequence import pad_sequences
 
 import Features as f
 from TrainingSample import TrainingSample
